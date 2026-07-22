@@ -1,0 +1,10 @@
+{
+  "replace": true,
+  "values": [
+    "minecraft:cobblestone",
+    "minecraft:blackstone",
+    "minecraft:cobbled_deepslate",
+    "minecraft:flint",
+    "realstoneage:rock"
+  ]
+}

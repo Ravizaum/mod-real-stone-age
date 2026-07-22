@@ -1,0 +1,46 @@
+{
+  "type": "minecraft:simple_block",
+  "config": {
+    "to_place": {
+      "type": "minecraft:weighted_state_provider",
+      "entries": [
+        {
+          "data": {
+            "Name": "realstoneage:rock",
+            "Properties": {
+              "facing": "north"
+            }
+          },
+          "weight": 1
+        },
+        {
+          "data": {
+            "Name": "realstoneage:rock",
+            "Properties": {
+              "facing": "east"
+            }
+          },
+          "weight": 1
+        },
+        {
+          "data": {
+            "Name": "realstoneage:rock",
+            "Properties": {
+              "facing": "south"
+            }
+          },
+          "weight": 1
+        },
+        {
+          "data": {
+            "Name": "realstoneage:rock",
+            "Properties": {
+              "facing": "west"
+            }
+          },
+          "weight": 1
+        }
+      ]
+    }
+  }
+}

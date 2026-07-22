@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:never"
+    }
+  ],
+  "type": "minecraft:smelting",
+  "experience": 0.7,
+  "group": "copper_ingot",
+  "ingredient": "minecraft:copper_ore",
+  "result": {
+    "id": "minecraft:copper_ingot"
+  }
+}

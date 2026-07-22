@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "realstoneage:block/flint"
+    },
+    "facing=east": {
+      "model": "realstoneage:block/flint",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "realstoneage:block/flint",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "realstoneage:block/flint",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "parent": "minecraft:block/button_inventory",
+  "textures": {
+    "texture": "minecraft:block/stone"
+  },
+  "display": {
+    "gui": {
+      "rotation": [30, 225, 0],
+      "translation": [0, 0, 0],
+      "scale": [0.8125, 0.8125, 0.8125]
+    },
+    "ground": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 3, 0],
+      "scale": [0.325, 0.325, 0.325]
+    }
+  }
+}

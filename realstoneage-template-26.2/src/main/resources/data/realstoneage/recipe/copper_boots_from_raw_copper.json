@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": { "X": "minecraft:raw_copper" },
+  "pattern": ["X X", "X X"],
+  "result": { "id": "minecraft:copper_boots", "components": { "minecraft:damage": 72 } }
+}

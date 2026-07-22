@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "realstoneage:block/rock"
+    },
+    "facing=east": {
+      "model": "realstoneage:block/rock",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "realstoneage:block/rock",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "realstoneage:block/rock",
+      "y": 270
+    }
+  }
+}

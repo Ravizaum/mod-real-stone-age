@@ -1,0 +1,30 @@
+# gradle
+.gradle/
+**/build/
+out/
+classes/
+
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+*.ipr
+*.iws
+*.iml
+.idea/
+
+# neoforge/minecraft run data
+run/
+runs/
+run-data/
+logs/
+
+# misc
+*.log
+log.txt
+.DS_Store

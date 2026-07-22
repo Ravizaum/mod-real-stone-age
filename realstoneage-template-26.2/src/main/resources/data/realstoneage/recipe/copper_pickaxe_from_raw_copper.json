@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": { "#": "minecraft:stick", "X": "minecraft:raw_copper" },
+  "pattern": ["XXX", " # ", " # "],
+  "result": { "id": "minecraft:copper_pickaxe", "components": { "minecraft:damage": 95 } }
+}
