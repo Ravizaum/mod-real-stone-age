@@ -101,3 +101,7 @@ blast furnace to process ore or stone at all.
 MIT — see [LICENSE](LICENSE). Free to use, fork, and include in modpacks.
 
 Project scaffolding originally generated from the [NeoForge MDK](https://github.com/NeoForged/MDK).
+
+## Support
+
+Manda um pix paizão: `ravifmattar@gmail.com`
