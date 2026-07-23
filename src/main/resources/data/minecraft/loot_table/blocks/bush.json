@@ -74,14 +74,23 @@
         {
           "type": "minecraft:item",
           "conditions": [
-            { "condition": "minecraft:random_chance", "chance": 0.375 }
+            {
+              "condition": "minecraft:random_chance",
+              "chance": 0.2
+            }
           ],
           "functions": [
             {
-              "count": { "type": "minecraft:uniform", "max": 2.0, "min": 0.0 },
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 2.0,
+                "min": 0.0
+              },
               "function": "minecraft:set_count"
             },
-            { "function": "minecraft:explosion_decay" }
+            {
+              "function": "minecraft:explosion_decay"
+            }
           ],
           "name": "minecraft:stick"
         }

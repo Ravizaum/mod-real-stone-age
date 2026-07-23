@@ -39,10 +39,10 @@ blast furnace to process ore or stone at all.
 
 - **Rocks and flint shards** scatter across the overworld surface (grass, stone, or
   sand — any exposed block with air above it), independently of each other:
-  - ~20% of chunks get a "hit" for each feature (`rarity_filter` chance = 1-in-5).
-  - A hit chunk scatters up to **14 candidates** (spread ±5 blocks horizontally, ±3
+  - ~16.7% of chunks get a "hit" for each feature (`rarity_filter` chance = 1-in-6).
+  - A hit chunk scatters up to **10 candidates** (spread ±5 blocks horizontally, ±3
     vertically), each placed only if the target spot is valid — so a typical hit
-    yields roughly a dozen-plus rocks or flints across the chunk.
+    yields several rocks or flints across the chunk.
 
 ## Breaking Blocks
 
@@ -100,8 +100,9 @@ blast furnace to process ore or stone at all.
 
 - **Leather drop from animals increased 50%** (cow, horse, llama, trader llama,
   donkey, mule, mooshroom, hoglin) — base drop range widened from 0–3 to 0–4.5.
-- **Stick drops from foliage**, all scaled to the same **25% chance of dropping at
-  least one stick** per break:
+- **Stick drops from foliage**, all scaled to the same **20% chance of the stick-drop
+  roll firing, dropping 0-2 sticks (uniform) when it does** per break — so at most a
+  13.3% chance of walking away with at least one stick:
   - All leaf types (oak, spruce, birch, jungle, acacia, dark oak, mangrove, cherry,
     pale oak, azalea, flowering azalea)
   - Leaf litter
