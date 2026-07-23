@@ -18,6 +18,37 @@ blast furnace to process ore or stone at all.
   required) as an *additional* recipe alongside the normal ingot-based one:
   pickaxe, axe, shovel, hoe, sword, helmet, chestplate, leggings, boots. Each comes
   out at **half durability** (`minecraft:damage` component pre-set to half max) if not smelted.
+- **Retuned stone/copper/iron/diamond tool stats**, applied via NeoForge's
+  `ModifyDefaultComponentsEvent` directly on the vanilla items. Every field below is
+  explicitly declared per tier (`TierToolStats` in `RealStoneAge.java`), even where it
+  matches vanilla, so the table is a complete standalone spec rather than a diff:
+
+  | Tier | Durability | Efficiency (speed) | Enchantability | Sword damage | Axe damage |
+  |---|---|---|---|---|---|
+  | Stone | 125 (was 131) | 4 | 5 | 3 (was 4) | 4 (was 8) |
+  | Copper | 190 | 5 | 10 (was 13) | 4 | 6 (was 8) |
+  | Iron | 350 (was 250) | 6 | 10 (was 14) | 5 | 8 |
+  | Diamond | 1750 (was 1561) | 8 | 10 | 6 | 8 |
+
+  Stone and copper axes/swords lose a noticeable chunk of their attack damage on top
+  of stone's already-short lifespan; iron becomes dramatically more durable while
+  keeping vanilla iron's mining speed; diamond gets a durability bump but is
+  otherwise unchanged. Pickaxe/shovel/hoe damage and every tier's attack speed are
+  left at vanilla values throughout.
+- **Retuned leather/copper/iron/diamond armor stats**, same mechanism and same
+  explicit-per-tier-table approach (`ArmorTierStats`):
+
+  | Material | Helmet dur. | Chest dur. | Legs dur. | Boots dur. | Helmet def | Chest def | Legs def | Boots def | Toughness | Knockback resist |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | Leather | 80 (was 55) | 100 (was 80) | 100 (was 75) | 80 (was 65) | 1 | 3 | 3 (was 2) | 1 | 0.0 | 0.5 (was 0.0) |
+  | Copper | 125 (was 121) | 175 (was 176) | 175 (was 165) | 125 (was 143) | 2 | 4 | 4 (was 3) | 2 (was 1) | 0.0 | 0.0 |
+  | Iron | 200 (was 165) | 250 (was 240) | 250 (was 225) | 200 (was 195) | 2 | 6 | 6 (was 5) | 2 | 1.0 (was 0.0) | 0.0 |
+  | Diamond | 400 (was 363) | 500 (was 528) | 500 (was 495) | 400 (was 429) | 3 | 8 | 8 (was 6) | 3 | 2.0 (unchanged) | 0.0 |
+
+  Leather gets a durability and leg-defense bump plus some knockback resistance (a
+  first for leather); copper, iron, and diamond all get more consistent durability
+  across pieces and stronger leg defense; iron notably picks up armor toughness for
+  the first time.
 
 ## New Items & Blocks
 
@@ -52,14 +83,23 @@ blast furnace to process ore or stone at all.
   them is exactly as slow as vanilla, only the drop changes. Stone-family blocks
   (stone, cobblestone, deepslate, cobbled deepslate, mossy cobblestone) drop nothing
   when punched, same as vanilla.
-- **Logs are as tough to break as stone.** Chopping any log (including stripped
-  variants, via the `minecraft:logs` tag) now takes as long as breaking stone/
-  cobblestone does by hand — regardless of tool, verified against vanilla's actual
-  `getDestroyProgress` calculation (hardness × correct-tool divisor), not just a
-  flat speed multiplier.
 - **Logs no longer drop wood without an axe.** Breaking a log with anything other
   than a tool tagged `minecraft:axes` (fist, pickaxe, shovel, etc.) drops nothing,
   unlike vanilla where logs always drop themselves regardless of tool.
+- **Logs, planks, wooden slabs, and wooden stairs now effectively require an axe for
+  full mining speed**, the same way stone blocks require a pickaxe. Vanilla never
+  gives these blocks the "requires correct tool" flag stone has, so breaking them
+  with the wrong tool never got vanilla's speed penalty; this reproduces that penalty
+  by hand (mining speed × 30/100 without an axe), which works out to the exact same
+  final speed as if the block had that flag set. Deliberately scoped to just these
+  four block tags rather than all of `minecraft:mineable_with_axe`, which also covers
+  things like bookshelves, ladders, and scaffolding.
+- **Logs' hardness is equalized to stone's** (1.5, down from vanilla's 2.0). A
+  block's hardness is baked into the Block instance at construction with no
+  datapack/component override available (unlike item stats), so this reproduces an
+  effective hardness of 1.5 by hand: mining speed on any `minecraft:logs` block is
+  multiplied by 2.0/1.5, which yields the exact same final break progress per tick
+  as if the block's hardness were actually 1.5.
 
 ## Furnaces
 

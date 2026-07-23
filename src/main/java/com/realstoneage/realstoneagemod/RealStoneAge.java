@@ -36,6 +36,18 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.item.enchantment.Enchantable;
+import net.neoforged.neoforge.event.ModifyDefaultComponentsEvent;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(RealStoneAge.MODID)
@@ -93,6 +105,149 @@ public class RealStoneAge {
 
         // Register our items into the appropriate vanilla creative tabs
         modEventBus.addListener(this::addCreative);
+
+        // Retune stone/copper/iron/diamond tool stats
+        modEventBus.addListener(this::onModifyDefaultComponents);
+        // Retune leather/copper/iron/diamond armor stats
+        modEventBus.addListener(this::onModifyDefaultArmorComponents);
+    }
+
+    // Complete, explicit stat table for the retuned tiers - every field is set on every tier's
+    // tools regardless of whether it actually differs from vanilla, so this table is the single
+    // source of truth for tool balance rather than a diff against whatever vanilla happens to ship.
+    // axeAttackSpeed is vanilla's per-tier axe attack-speed modifier, kept as-is since only the
+    // damage number is being retuned.
+    private record TierToolStats(int durability, float miningSpeed, int enchantability,
+                                  float swordDamage, float axeDamage, float axeAttackSpeed,
+                                  TagKey<Block> incorrectBlocksForDrops) {
+    }
+
+    private static final TierToolStats STONE_STATS =
+            new TierToolStats(125, 4.0F, 5, 3.0F, 4.0F, -3.2F, ToolMaterial.STONE.incorrectBlocksForDrops());
+    private static final TierToolStats COPPER_STATS =
+            new TierToolStats(190, 5.0F, 10, 4.0F, 6.0F, -3.2F, ToolMaterial.COPPER.incorrectBlocksForDrops());
+    private static final TierToolStats IRON_STATS =
+            new TierToolStats(350, 6.0F, 10, 5.0F, 8.0F, -3.1F, ToolMaterial.IRON.incorrectBlocksForDrops());
+    private static final TierToolStats DIAMOND_STATS =
+            new TierToolStats(1750, 8.0F, 10, 6.0F, 8.0F, -3.0F, ToolMaterial.DIAMOND.incorrectBlocksForDrops());
+
+    private void onModifyDefaultComponents(ModifyDefaultComponentsEvent event) {
+        applyTierToolStats(event, STONE_STATS, Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_SHOVEL, Items.STONE_HOE, Items.STONE_SWORD);
+        applyTierToolStats(event, COPPER_STATS, Items.COPPER_PICKAXE, Items.COPPER_AXE, Items.COPPER_SHOVEL, Items.COPPER_HOE, Items.COPPER_SWORD);
+        applyTierToolStats(event, IRON_STATS, Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SHOVEL, Items.IRON_HOE, Items.IRON_SWORD);
+        applyTierToolStats(event, DIAMOND_STATS, Items.DIAMOND_PICKAXE, Items.DIAMOND_AXE, Items.DIAMOND_SHOVEL, Items.DIAMOND_HOE, Items.DIAMOND_SWORD);
+    }
+
+    private void applyTierToolStats(ModifyDefaultComponentsEvent event, TierToolStats stats,
+                                     Item pickaxe, Item axe, Item shovel, Item hoe, Item sword) {
+        event.modify(pickaxe, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.durability());
+            builder.set(DataComponents.ENCHANTABLE, new Enchantable(stats.enchantability()));
+            builder.set(DataComponents.TOOL, miningTool(context, stats, BlockTags.MINEABLE_WITH_PICKAXE));
+        });
+        event.modify(shovel, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.durability());
+            builder.set(DataComponents.ENCHANTABLE, new Enchantable(stats.enchantability()));
+            builder.set(DataComponents.TOOL, miningTool(context, stats, BlockTags.MINEABLE_WITH_SHOVEL));
+        });
+        event.modify(hoe, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.durability());
+            builder.set(DataComponents.ENCHANTABLE, new Enchantable(stats.enchantability()));
+            builder.set(DataComponents.TOOL, miningTool(context, stats, BlockTags.MINEABLE_WITH_HOE));
+        });
+        event.modify(axe, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.durability());
+            builder.set(DataComponents.ENCHANTABLE, new Enchantable(stats.enchantability()));
+            builder.set(DataComponents.TOOL, miningTool(context, stats, BlockTags.MINEABLE_WITH_AXE));
+            builder.set(DataComponents.ATTRIBUTE_MODIFIERS, attackAttributes(stats.axeDamage(), stats.axeAttackSpeed()));
+        });
+        event.modify(sword, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.durability());
+            builder.set(DataComponents.ENCHANTABLE, new Enchantable(stats.enchantability()));
+            builder.set(DataComponents.ATTRIBUTE_MODIFIERS, attackAttributes(stats.swordDamage(), -2.4F));
+        });
+    }
+
+    // Reconstructs a pickaxe/axe/shovel/hoe's TOOL component (which block tag it's incorrect for,
+    // which tag it mines efficiently and at what speed) the same way vanilla's ToolMaterial does,
+    // just pulling the numbers from our own tier table instead of ToolMaterial's built-in fields.
+    private static Tool miningTool(HolderLookup.Provider context, TierToolStats stats, TagKey<Block> minesEfficiently) {
+        var blocks = context.lookupOrThrow(Registries.BLOCK);
+        return new Tool(
+                java.util.List.of(
+                        Tool.Rule.deniesDrops(blocks.getOrThrow(stats.incorrectBlocksForDrops())),
+                        Tool.Rule.minesAndDrops(blocks.getOrThrow(minesEfficiently), stats.miningSpeed())
+                ),
+                1.0F, 1, true
+        );
+    }
+
+    // Rebuilds the mainhand attack-damage/attack-speed attribute modifiers with a new attack
+    // damage total (attack speed left at vanilla's value for that item).
+    private static ItemAttributeModifiers attackAttributes(float attackDamage, float attackSpeedBaseline) {
+        return ItemAttributeModifiers.builder()
+                .add(Attributes.ATTACK_DAMAGE,
+                        new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, attackDamage, AttributeModifier.Operation.ADD_VALUE),
+                        EquipmentSlotGroup.MAINHAND)
+                .add(Attributes.ATTACK_SPEED,
+                        new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, attackSpeedBaseline, AttributeModifier.Operation.ADD_VALUE),
+                        EquipmentSlotGroup.MAINHAND)
+                .build();
+    }
+
+    // Complete, explicit per-piece stat table for the retuned armor materials - every field is set
+    // regardless of whether it differs from vanilla, same rationale as TierToolStats above.
+    private record ArmorTierStats(int helmetDurability, int chestplateDurability, int leggingsDurability, int bootsDurability,
+                                   int helmetDefense, int chestplateDefense, int leggingsDefense, int bootsDefense,
+                                   float toughness, float knockbackResistance) {
+    }
+
+    private static final ArmorTierStats LEATHER_STATS = new ArmorTierStats(80, 100, 100, 80, 1, 3, 3, 1, 0.0F, 0.5F);
+    private static final ArmorTierStats COPPER_ARMOR_STATS = new ArmorTierStats(125, 175, 175, 125, 2, 4, 4, 2, 0.0F, 0.0F);
+    private static final ArmorTierStats IRON_ARMOR_STATS = new ArmorTierStats(200, 250, 250, 200, 2, 6, 6, 2, 1.0F, 0.0F);
+    private static final ArmorTierStats DIAMOND_ARMOR_STATS = new ArmorTierStats(400, 500, 500, 400, 3, 8, 8, 3, 2.0F, 0.0F);
+
+    private void onModifyDefaultArmorComponents(ModifyDefaultComponentsEvent event) {
+        applyArmorTierStats(event, LEATHER_STATS, Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS, Items.LEATHER_BOOTS);
+        applyArmorTierStats(event, COPPER_ARMOR_STATS, Items.COPPER_HELMET, Items.COPPER_CHESTPLATE, Items.COPPER_LEGGINGS, Items.COPPER_BOOTS);
+        applyArmorTierStats(event, IRON_ARMOR_STATS, Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS);
+        applyArmorTierStats(event, DIAMOND_ARMOR_STATS, Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.DIAMOND_BOOTS);
+    }
+
+    private void applyArmorTierStats(ModifyDefaultComponentsEvent event, ArmorTierStats stats,
+                                      Item helmet, Item chestplate, Item leggings, Item boots) {
+        event.modify(helmet, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.helmetDurability());
+            builder.set(DataComponents.ATTRIBUTE_MODIFIERS,
+                    armorAttributes("helmet", stats.helmetDefense(), stats.toughness(), stats.knockbackResistance(), EquipmentSlotGroup.HEAD));
+        });
+        event.modify(chestplate, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.chestplateDurability());
+            builder.set(DataComponents.ATTRIBUTE_MODIFIERS,
+                    armorAttributes("chestplate", stats.chestplateDefense(), stats.toughness(), stats.knockbackResistance(), EquipmentSlotGroup.CHEST));
+        });
+        event.modify(leggings, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.leggingsDurability());
+            builder.set(DataComponents.ATTRIBUTE_MODIFIERS,
+                    armorAttributes("leggings", stats.leggingsDefense(), stats.toughness(), stats.knockbackResistance(), EquipmentSlotGroup.LEGS));
+        });
+        event.modify(boots, (builder, context, i) -> {
+            builder.set(DataComponents.MAX_DAMAGE, stats.bootsDurability());
+            builder.set(DataComponents.ATTRIBUTE_MODIFIERS,
+                    armorAttributes("boots", stats.bootsDefense(), stats.toughness(), stats.knockbackResistance(), EquipmentSlotGroup.FEET));
+        });
+    }
+
+    // Rebuilds an armor piece's defense/toughness/knockback-resistance attribute modifiers, mirroring
+    // vanilla ArmorMaterial#createAttributes's structure and modifier-id naming ("armor.<piece>").
+    private static ItemAttributeModifiers armorAttributes(String pieceName, int defense, float toughness,
+                                                            float knockbackResistance, EquipmentSlotGroup slotGroup) {
+        Identifier modifierId = Identifier.withDefaultNamespace("armor." + pieceName);
+        return ItemAttributeModifiers.builder()
+                .add(Attributes.ARMOR, new AttributeModifier(modifierId, defense, AttributeModifier.Operation.ADD_VALUE), slotGroup)
+                .add(Attributes.ARMOR_TOUGHNESS, new AttributeModifier(modifierId, toughness, AttributeModifier.Operation.ADD_VALUE), slotGroup)
+                .add(Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(modifierId, knockbackResistance, AttributeModifier.Operation.ADD_VALUE), slotGroup)
+                .build();
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
@@ -175,20 +330,44 @@ public class RealStoneAge {
         }
     }
 
-    // Logs take 50% longer to break (i.e. break 1/1.5 as fast) than vanilla.
-    @SubscribeEvent
-    public void onBreakSpeed(net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed event) {
-        if (event.getState().is(net.minecraft.tags.BlockTags.LOGS)) {
-            event.setNewSpeed(event.getNewSpeed() / 2.5f);
-        }
-    }
-
     // Logs normally drop themselves regardless of tool in vanilla; suppress that drop entirely
     // unless the tool used is an axe.
     @SubscribeEvent
     public void onBlockDrops(net.neoforged.neoforge.event.level.BlockDropsEvent event) {
         if (event.getState().is(net.minecraft.tags.BlockTags.LOGS) && !event.getTool().is(ItemTags.AXES)) {
             event.setCanceled(true);
+        }
+    }
+
+    // Logs, planks, wooden slabs, and wooden stairs don't require a "correct tool" in vanilla the
+    // way stone requires a pickaxe, so breaking them without an axe never gets hit with the same
+    // 30->100 mining-speed divisor penalty stone blocks get. This reproduces that penalty by hand:
+    // multiplying speed by 30/100 without an axe gives the exact same final getDestroyProgress
+    // result as if the block had vanilla's "requires correct tool" flag set, without needing to
+    // touch the block's own (unmodifiable-via-datapack) properties. Deliberately scoped to just
+    // these four tags rather than the full minecraft:mineable_with_axe tag (which also covers
+    // things like bookshelves, ladders, and scaffolding).
+    @SubscribeEvent
+    public void onWoodBreakSpeed(net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed event) {
+        var state = event.getState();
+        boolean isWoodFamily = state.is(net.minecraft.tags.BlockTags.LOGS)
+                || state.is(net.minecraft.tags.BlockTags.PLANKS)
+                || state.is(net.minecraft.tags.BlockTags.WOODEN_SLABS)
+                || state.is(net.minecraft.tags.BlockTags.WOODEN_STAIRS);
+        if (isWoodFamily && !event.getEntity().getMainHandItem().is(ItemTags.AXES)) {
+            event.setNewSpeed(event.getNewSpeed() * 0.3F);
+        }
+    }
+
+    // Logs have vanilla hardness 2.0 vs stone's 1.5. A block's hardness is baked into the Block
+    // instance at construction (no datapack/component override exists for it, unlike item stats),
+    // so this reproduces an equivalent hardness of 1.5 by hand: getDestroyProgress divides speed by
+    // hardness, so multiplying speed by (2.0 / 1.5) here yields the exact same final progress as if
+    // the block's hardness were actually 1.5.
+    @SubscribeEvent
+    public void onLogHardness(net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed event) {
+        if (event.getState().is(net.minecraft.tags.BlockTags.LOGS)) {
+            event.setNewSpeed(event.getNewSpeed() * (2.0F / 1.5F));
         }
     }
 
