@@ -46,17 +46,20 @@ blast furnace to process ore or stone at all.
 
 ## Breaking Blocks
 
-- **Punching stone-family blocks** (stone, cobblestone, deepslate, cobbled deepslate,
-  mossy cobblestone) without a pickaxe now drops **1–2 rocks** per block, instead of
-  nothing. Punching copper ore or deepslate copper ore without a pickaxe drops **1 raw
-  copper**. These drops are spawned directly (not via the vanilla "correct tool"
+- **Punching copper ore or deepslate copper ore** without a pickaxe drops **1 raw
+  copper**. This drop is spawned directly (not via the vanilla "correct tool"
   mechanism), so **mining speed for these blocks is completely unaffected** — punching
-  them is exactly as slow as vanilla, only the drop changes.
+  them is exactly as slow as vanilla, only the drop changes. Stone-family blocks
+  (stone, cobblestone, deepslate, cobbled deepslate, mossy cobblestone) drop nothing
+  when punched, same as vanilla.
 - **Logs are as tough to break as stone.** Chopping any log (including stripped
   variants, via the `minecraft:logs` tag) now takes as long as breaking stone/
   cobblestone does by hand — regardless of tool, verified against vanilla's actual
   `getDestroyProgress` calculation (hardness × correct-tool divisor), not just a
   flat speed multiplier.
+- **Logs no longer drop wood without an axe.** Breaking a log with anything other
+  than a tool tagged `minecraft:axes` (fist, pickaxe, shovel, etc.) drops nothing,
+  unlike vanilla where logs always drop themselves regardless of tool.
 
 ## Furnaces
 
@@ -69,6 +72,29 @@ blast furnace to process ore or stone at all.
 - **Blast furnace runs at normal furnace speed** — all blasting-recipe cook times
   were doubled from the vanilla 100 ticks to 200 ticks, matching the regular
   furnace exactly (no more "blast furnace is 2x faster" vanilla behavior).
+
+## World Generation (Ore)
+
+- **Coal never generates above Y48** (15 blocks below sea level, Y63). The upper coal
+  band (vanilla Y136+, the "coal on mountainsides" band) is disabled outright; the
+  buried coal band's height cap is lowered from Y192 to Y48. Below that, coal
+  generates exactly as vanilla does.
+- **Iron and copper veins above Y48 show at most one exposed block, and never place
+  more than 2 ore blocks total.** Vein geometry (spread/radius) above Y48 is left at
+  vanilla's normal size (9 for iron, 10-20 for copper) so a vein has the same odds of
+  reaching an existing cave or cliff face as vanilla does — only the *number of blocks
+  actually placed* is capped, to 2, so breaking the one exposed block doesn't reveal a
+  full vanilla-size buried vein behind it. Of those (at most 2) placed blocks, only
+  one may be exposed to air (a cave wall, a cliff face, open sky); every other exposed
+  candidate is discarded instead. Below Y48, both vein size and exposure are fully
+  vanilla. This needed a custom worldgen feature (`CappedExposureOreFeature`,
+  registered as `realstoneage:ore_exposed_capped`) since vanilla's ore feature has no
+  concept of a placement cap independent of the vein's spread; it's a copy of
+  vanilla's `OreFeature` placement algorithm with running placed/exposed counters
+  added. Implemented by splitting each vanilla ore feature at Y48 into an unchanged
+  "deep" placement and a new `realstoneage:*_surface` placement (same vein size, new
+  feature type), injected via a `neoforge:add_features` biome modifier at the
+  `underground_ores` step.
 
 ## Loot Table Tweaks
 

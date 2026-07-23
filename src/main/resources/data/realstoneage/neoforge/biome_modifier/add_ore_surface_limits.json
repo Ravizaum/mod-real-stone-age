@@ -1,0 +1,11 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "realstoneage:ore_iron_middle_surface",
+    "realstoneage:ore_iron_small_surface",
+    "realstoneage:ore_copper_surface",
+    "realstoneage:ore_copper_large_surface"
+  ],
+  "step": "underground_ores"
+}
