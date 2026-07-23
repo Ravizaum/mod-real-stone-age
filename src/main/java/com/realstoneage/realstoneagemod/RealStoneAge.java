@@ -30,8 +30,12 @@ import net.neoforged.neoforge.event.ModifyRecipeJsonsEvent;
 import net.neoforged.neoforge.event.entity.player.UseItemOnBlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(RealStoneAge.MODID)
@@ -44,6 +48,13 @@ public class RealStoneAge {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     // Create a Deferred Register to hold Items which will all be registered under the "realstoneage" namespace
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
+    // Create a Deferred Register to hold worldgen Features which will all be registered under the "realstoneage" namespace
+    public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(Registries.FEATURE, MODID);
+
+    // Ore feature used by the above-Y48 "surface" iron/copper configured features - allows at most
+    // one exposed-to-air block per vein instead of vanilla's all-or-nothing discard chance.
+    public static final DeferredHolder<Feature<?>, CappedExposureOreFeature> ORE_EXPOSED_CAPPED =
+            FEATURES.register("ore_exposed_capped", () -> new CappedExposureOreFeature(OreConfiguration.CODEC));
 
     // A rock, usable in place of cobblestone for stone tools, placeable in the world just like a button
     public static final DeferredBlock<RockBlock> ROCK_BLOCK = BLOCKS.registerBlock("rock", p -> new RockBlock(p, false),
@@ -69,13 +80,13 @@ public class RealStoneAge {
     // deliberately NOT done via the "correct tool" harvest-check mechanism, since that same check
     // also drives mining speed (30 vs 100 divisor); doing it there would make punching these
     // blocks faster too, which isn't wanted - only the drop changes, speed stays 100% vanilla.
-    private static final Block[] PUNCHABLE_STONE = { Blocks.STONE, Blocks.COBBLESTONE, Blocks.DEEPSLATE, Blocks.COBBLED_DEEPSLATE, Blocks.MOSSY_COBBLESTONE };
     private static final Block[] PUNCHABLE_COPPER_ORE = { Blocks.COPPER_ORE, Blocks.DEEPSLATE_COPPER_ORE };
 
     public RealStoneAge(IEventBus modEventBus) {
         // Register the Deferred Registers to the mod event bus so blocks and items get registered
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
+        FEATURES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
@@ -142,9 +153,9 @@ public class RealStoneAge {
         event.cancelWithResult(InteractionResult.SUCCESS);
     }
 
-    // Punching stone/cobblestone/deepslate/cobbled_deepslate/copper ore without a pickaxe normally
-    // drops nothing at all; this adds a reduced/alternate drop for that case, spawned manually so
-    // vanilla's own tool-correctness check (and the mining speed it drives) is left completely alone.
+    // Punching copper ore without a pickaxe normally drops nothing at all; this adds a reduced drop
+    // for that case, spawned manually so vanilla's own tool-correctness check (and the mining speed
+    // it drives) is left completely alone.
     @SubscribeEvent
     public void onBreakBlock(BreakBlockEvent event) {
         if (event.getLevel().isClientSide() || !(event.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) {
@@ -156,13 +167,6 @@ public class RealStoneAge {
         }
 
         Block block = event.getState().getBlock();
-        for (Block stone : PUNCHABLE_STONE) {
-            if (block == stone) {
-                int count = 1 + level.getRandom().nextInt(2);
-                Block.popResource(level, event.getPos(), new net.minecraft.world.item.ItemStack(ROCK.get(), count));
-                return;
-            }
-        }
         for (Block ore : PUNCHABLE_COPPER_ORE) {
             if (block == ore) {
                 Block.popResource(level, event.getPos(), new net.minecraft.world.item.ItemStack(Items.RAW_COPPER));
@@ -176,6 +180,15 @@ public class RealStoneAge {
     public void onBreakSpeed(net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed event) {
         if (event.getState().is(net.minecraft.tags.BlockTags.LOGS)) {
             event.setNewSpeed(event.getNewSpeed() / 2.5f);
+        }
+    }
+
+    // Logs normally drop themselves regardless of tool in vanilla; suppress that drop entirely
+    // unless the tool used is an axe.
+    @SubscribeEvent
+    public void onBlockDrops(net.neoforged.neoforge.event.level.BlockDropsEvent event) {
+        if (event.getState().is(net.minecraft.tags.BlockTags.LOGS) && !event.getTool().is(ItemTags.AXES)) {
+            event.setCanceled(true);
         }
     }
 
