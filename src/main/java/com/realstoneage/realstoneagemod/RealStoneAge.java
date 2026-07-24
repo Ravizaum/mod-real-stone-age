@@ -6,15 +6,28 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.BlastFurnaceBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.sounds.SoundSource;
@@ -27,13 +40,18 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.ModifyRecipeJsonsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.UseItemOnBlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
 import net.minecraft.core.component.DataComponents;
@@ -65,6 +83,10 @@ public class RealStoneAge {
     // Create a Deferred Register to hold BlockEntityTypes which will all be registered under the "realstoneage" namespace
     public static final DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
+    // Create a Deferred Register to hold RecipeSerializers which will all be registered under the "realstoneage" namespace
+    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
+    // Create a Deferred Register to hold MenuTypes which will all be registered under the "realstoneage" namespace
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(Registries.MENU, MODID);
 
     // Ore feature used by the above-Y48 "surface" iron/copper configured features - allows at most
     // one exposed-to-air block per vein instead of vanilla's all-or-nothing discard chance.
@@ -92,17 +114,57 @@ public class RealStoneAge {
     public static final DeferredBlock<CraftingBenchBlock> CRAFTING_BENCH_BLOCK = BLOCKS.registerBlock("crafting_bench", CraftingBenchBlock::new,
             () -> BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD).noLootTable().noOcclusion());
     public static final DeferredItem<CraftingBenchItem> CRAFTING_BENCH =
-            ITEMS.registerItem("crafting_bench", props -> new CraftingBenchItem(CRAFTING_BENCH_BLOCK.get(), props), Item.Properties::new);
+            ITEMS.registerItem("crafting_bench", props -> new CraftingBenchItem(CRAFTING_BENCH_BLOCK.get(), props),
+                    () -> new Item.Properties().useBlockDescriptionPrefix());
     public static final DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>,
             net.minecraft.world.level.block.entity.BlockEntityType<CraftingBenchBlockEntity>> CRAFTING_BENCH_BLOCK_ENTITY =
             BLOCK_ENTITIES.register("crafting_bench",
                     () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(CraftingBenchBlockEntity::new, CRAFTING_BENCH_BLOCK.get()));
 
-    // Recipes to remove entirely (wood and gold tools/armor can no longer be crafted)
+    // Recipe type for ForgeCraftingRecipe - deliberately NOT registered in a registry. RecipeMap
+    // groups recipes by RecipeType identity alone (see RecipeMap#byType), so a plain instance from
+    // RecipeType.simple is sufficient for recipe lookup to work; only the RecipeSerializer (which
+    // the "type" field in recipe JSON actually dispatches on) needs registering below.
+    public static final RecipeType<ForgeCraftingRecipe> FORGE_CRAFTING_TYPE =
+            RecipeType.simple(Identifier.fromNamespaceAndPath(MODID, "forge_crafting"));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ForgeCraftingRecipe>> FORGE_CRAFTING_SERIALIZER =
+            RECIPE_SERIALIZERS.register("forge_crafting", () -> ForgeCraftingRecipe.SERIALIZER);
+
+    // The Forge menu - opened by right-clicking a vanilla Anvil or a Basic Anvil that currently has
+    // an adjacent Blast Furnace (see onRightClickAnvil below). Neither anvil type has its own block
+    // entity that owns this menu type, since the vanilla Anvil is an unmodified vanilla block.
+    public static final DeferredHolder<MenuType<?>, MenuType<ForgeMenu>> FORGE_MENU =
+            MENU_TYPES.register("forge", () -> new MenuType<>(ForgeMenu::new, net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
+
+    // The Basic Anvil - a cheaper, limited-durability stand-in for a vanilla Anvil (see
+    // BasicAnvilBlockEntity.MAX_USES), used the same way: right-click it next to a Blast Furnace to
+    // open the Forge menu.
+    public static final DeferredBlock<BasicAnvilBlock> BASIC_ANVIL_BLOCK = BLOCKS.registerBlock("basic_anvil", BasicAnvilBlock::new,
+            () -> BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(5.0F, 1200.0F).sound(SoundType.ANVIL).noLootTable().noOcclusion());
+    public static final DeferredItem<BasicAnvilItem> BASIC_ANVIL =
+            ITEMS.registerItem("basic_anvil", props -> new BasicAnvilItem(BASIC_ANVIL_BLOCK.get(), props),
+                    () -> new Item.Properties().useBlockDescriptionPrefix());
+    public static final DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>,
+            net.minecraft.world.level.block.entity.BlockEntityType<BasicAnvilBlockEntity>> BASIC_ANVIL_BLOCK_ENTITY =
+            BLOCK_ENTITIES.register("basic_anvil",
+                    () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(BasicAnvilBlockEntity::new, BASIC_ANVIL_BLOCK.get()));
+
+    // Recipes to remove entirely (wood/gold tools+armor can no longer be crafted; vanilla's own
+    // copper-ingot tool+armor recipes, and iron/diamond tools+armor, move to being Forge-exclusive -
+    // see the forge_copper_*/forge_iron_*/forge_diamond_* recipes and ForgeCraftingRecipe. The
+    // raw-copper recipes stay Crafting-Table-craftable as before - see copper_*_from_raw_copper.json).
+    // The vanilla Anvil recipe is deliberately NOT removed - it's craftable as normal, since it's now
+    // central to the Forge system (see onRightClickAnvil).
     private static final String[] REMOVED_RECIPES = {
             "wooden_pickaxe", "wooden_axe", "wooden_shovel", "wooden_hoe", "wooden_sword",
             "golden_pickaxe", "golden_axe", "golden_shovel", "golden_hoe", "golden_sword",
-            "golden_helmet", "golden_chestplate", "golden_leggings", "golden_boots"
+            "golden_helmet", "golden_chestplate", "golden_leggings", "golden_boots",
+            "copper_pickaxe", "copper_axe", "copper_shovel", "copper_hoe", "copper_sword",
+            "copper_helmet", "copper_chestplate", "copper_leggings", "copper_boots",
+            "iron_pickaxe", "iron_axe", "iron_shovel", "iron_hoe", "iron_sword",
+            "iron_helmet", "iron_chestplate", "iron_leggings", "iron_boots",
+            "diamond_pickaxe", "diamond_axe", "diamond_shovel", "diamond_hoe", "diamond_sword",
+            "diamond_helmet", "diamond_chestplate", "diamond_leggings", "diamond_boots"
     };
 
     // Blocks that drop something extra when punched without a pickaxe - see onBreakBlock. This is
@@ -117,6 +179,8 @@ public class RealStoneAge {
         ITEMS.register(modEventBus);
         FEATURES.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
+        RECIPE_SERIALIZERS.register(modEventBus);
+        MENU_TYPES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
@@ -273,9 +337,10 @@ public class RealStoneAge {
             event.accept(ROCK);
             event.accept(STICK_BUNDLE);
         }
-        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+        if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(BELLOWS);
             event.accept(CRAFTING_BENCH);
+            event.accept(BASIC_ANVIL);
         }
     }
 
@@ -326,6 +391,100 @@ public class RealStoneAge {
             }
         }
         event.cancelWithResult(InteractionResult.SUCCESS);
+    }
+
+    private static final net.minecraft.network.chat.Component FORGE_TITLE = net.minecraft.network.chat.Component.translatable("container.realstoneage.forge");
+
+    // Repurposes right-clicking a vanilla Anvil or a Basic Anvil: instead of the normal
+    // repair/rename menu (which this mod drops entirely), it opens the Forge menu - but only when
+    // the anvil currently has a Blast Furnace in an adjacent block space. With no adjacent furnace,
+    // right-clicking either anvil does nothing. This check is purely live (done on every
+    // right-click, and again in ForgeMenu#stillValid while the menu is open) - there's no stored
+    // link, so moving the furnace away just makes the anvil useless again.
+    @SubscribeEvent
+    public void onRightClickAnvil(PlayerInteractEvent.RightClickBlock event) {
+        Level level = event.getEntity().level();
+        BlockPos pos = event.getPos();
+        var state = level.getBlockState(pos);
+        boolean isBasicAnvil = state.is(BASIC_ANVIL_BLOCK.get());
+        if (!state.is(Blocks.ANVIL) && !isBasicAnvil) {
+            return;
+        }
+
+        // Suppress the block's own default interaction (vanilla's repair/rename menu) on both
+        // sides, without touching the held item's own interaction (e.g. placing another block
+        // against this one still works normally).
+        event.setUseBlock(net.minecraft.util.TriState.FALSE);
+        if (level.isClientSide() || !hasAdjacentBlastFurnace(level, pos)) {
+            return;
+        }
+
+        BasicAnvilBlockEntity blockEntity = isBasicAnvil ? (BasicAnvilBlockEntity) level.getBlockEntity(pos) : null;
+        MenuProvider menuProvider = new SimpleMenuProvider(
+                (containerId, inventory, player) -> new ForgeMenu(containerId, inventory, ContainerLevelAccess.create(level, pos), blockEntity),
+                FORGE_TITLE);
+        event.getEntity().openMenu(menuProvider);
+    }
+
+    public static boolean hasAdjacentBlastFurnace(LevelReader level, BlockPos pos) {
+        return findAdjacentBlastFurnace(level, pos).isPresent();
+    }
+
+    public static Optional<BlockPos> findAdjacentBlastFurnace(LevelReader level, BlockPos pos) {
+        for (Direction direction : Direction.values()) {
+            BlockPos neighbor = pos.relative(direction);
+            if (level.getBlockState(neighbor).is(Blocks.BLAST_FURNACE)) {
+                return Optional.of(neighbor);
+            }
+        }
+        return Optional.empty();
+    }
+
+    // How long the Blast Furnace visually "lights up" for after a Forge craft is taken (see
+    // ForgeMenu#onCraftTaken) - purely cosmetic, doesn't touch the furnace's own real fuel/burn
+    // state, so it's tracked independently here rather than on the furnace's block entity.
+    private static final int FURNACE_FLASH_DURATION_TICKS = 20;
+    private static final Map<ServerLevel, Map<BlockPos, Integer>> PENDING_FURNACE_UNLIGHTS = new HashMap<>();
+
+    public static void flashBlastFurnaceLight(ServerLevel level, BlockPos furnacePos) {
+        BlockState state = level.getBlockState(furnacePos);
+        if (!state.is(Blocks.BLAST_FURNACE)) {
+            return;
+        }
+        if (!state.getValue(BlastFurnaceBlock.LIT)) {
+            level.setBlock(furnacePos, state.setValue(BlastFurnaceBlock.LIT, true), 3);
+        }
+        PENDING_FURNACE_UNLIGHTS.computeIfAbsent(level, l -> new HashMap<>()).put(furnacePos, FURNACE_FLASH_DURATION_TICKS);
+    }
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        if (PENDING_FURNACE_UNLIGHTS.isEmpty()) {
+            return;
+        }
+        var levelIterator = PENDING_FURNACE_UNLIGHTS.entrySet().iterator();
+        while (levelIterator.hasNext()) {
+            var levelEntry = levelIterator.next();
+            ServerLevel level = levelEntry.getKey();
+            var posIterator = levelEntry.getValue().entrySet().iterator();
+            while (posIterator.hasNext()) {
+                var posEntry = posIterator.next();
+                int ticksLeft = posEntry.getValue() - 1;
+                if (ticksLeft <= 0) {
+                    BlockPos pos = posEntry.getKey();
+                    BlockState state = level.getBlockState(pos);
+                    if (state.is(Blocks.BLAST_FURNACE) && state.getValue(BlastFurnaceBlock.LIT)) {
+                        level.setBlock(pos, state.setValue(BlastFurnaceBlock.LIT, false), 3);
+                    }
+                    posIterator.remove();
+                } else {
+                    posEntry.setValue(ticksLeft);
+                }
+            }
+            if (levelEntry.getValue().isEmpty()) {
+                levelIterator.remove();
+            }
+        }
     }
 
     // Punching copper ore without a pickaxe normally drops nothing at all; this adds a reduced drop

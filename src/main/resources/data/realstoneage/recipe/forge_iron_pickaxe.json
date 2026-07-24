@@ -1,0 +1,6 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "key": { "#": "minecraft:stick", "X": "#minecraft:iron_tool_materials" },
+  "pattern": ["XXX", " # ", " # "],
+  "result": { "id": "minecraft:iron_pickaxe" }
+}

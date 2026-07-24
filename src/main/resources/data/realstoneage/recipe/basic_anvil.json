@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": { "S": "minecraft:smooth_stone", "c": "minecraft:cobblestone" },
+  "pattern": ["SSS", " c ", "ccc"],
+  "result": { "id": "realstoneage:basic_anvil" }
+}

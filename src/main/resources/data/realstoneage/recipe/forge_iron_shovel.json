@@ -1,0 +1,6 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "key": { "#": "minecraft:stick", "X": "#minecraft:iron_tool_materials" },
+  "pattern": ["X", "#", "#"],
+  "result": { "id": "minecraft:iron_shovel" }
+}
