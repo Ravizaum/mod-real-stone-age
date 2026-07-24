@@ -15,9 +15,12 @@ blast furnace to process ore or stone at all.
   blackstone, and cobbled deepslate. (`minecraft:stone_tool_materials` tag extended
   with `minecraft:flint` and `realstoneage:rock`.)
 - **Copper tools and armor**, craftable directly from raw copper (no smelting
-  required) as an *additional* recipe alongside the normal ingot-based one:
-  pickaxe, axe, shovel, hoe, sword, helmet, chestplate, leggings, boots. Each comes
-  out at **half durability** (`minecraft:damage` component pre-set to half max) if not smelted.
+  required) on a Crafting Table or Crafting Bench: pickaxe, axe, shovel, hoe, sword,
+  helmet, chestplate, leggings, boots. Each comes out at **half durability**
+  (`minecraft:damage` component pre-set to half max). Smelting the copper into an
+  ingot first no longer works on a plain Crafting Table at all - vanilla's own
+  ingot-based recipes for these were removed; an ingot now only works in a Forge,
+  and gives full durability instead. See "Forge Smelting System" below.
 - **Retuned stone/copper/iron/diamond tool stats**, applied via NeoForge's
   `ModifyDefaultComponentsEvent` directly on the vanilla items. Every field below is
   explicitly declared per tier (`TierToolStats` in `RealStoneAge.java`), even where it
@@ -153,6 +156,49 @@ blast furnace to process ore or stone at all.
   were doubled from the vanilla 100 ticks to 200 ticks, matching the regular
   furnace exactly (no more "blast furnace is 2x faster" vanilla behavior).
 
+## Forge Smelting System
+
+- **The vanilla Anvil is repurposed as a smelting station.** Right-clicking an Anvil
+  with a **Blast Furnace in an adjacent block space** opens a Forge menu (a 3x3
+  crafting grid plus a coal-only fuel slot) instead of vanilla's item repair/rename
+  menu — that repair menu no longer opens at all, even without an adjacent furnace.
+  With no adjacent Blast Furnace, right-clicking an Anvil does nothing. The adjacency
+  check is live — done fresh on every right-click, and re-checked continuously while
+  the Forge menu is open — so pulling the Blast Furnace away closes the menu and makes
+  the Anvil useless again, with nothing stored linking the two blocks. The Anvil's own
+  crafting recipe is unchanged from vanilla.
+- **Basic Anvil** (`realstoneage:basic_anvil`) — a cheaper, limited-durability
+  stand-in for a vanilla Anvil: same shape recipe as a real Anvil, but smooth stone
+  in place of the iron blocks and cobblestone in place of the iron ingots. Works
+  identically to a real Anvil (same adjacency check, same Forge menu, same recipes),
+  but only survives **16 crafts** before self-destructing with no drop — manually
+  mining it before then instead drops it as an item with its remaining uses
+  preserved, the same mechanic as the Crafting Bench (including the crack-overlay
+  wear effect and inventory durability bar). Rotates with the same `FACING` behavior
+  and the same narrow hitbox (base/legs/top slab) as a real Anvil.
+- **Forge recipes use their own custom `RecipeType`** (`realstoneage:forge_crafting`,
+  `ForgeCraftingRecipe`), entirely separate from vanilla's `RecipeType.CRAFTING`.
+  This is what keeps Forge-exclusive recipes from also becoming craftable on a plain
+  Crafting Table — recipe lookup groups recipes purely by `RecipeType` identity, so a
+  distinct type is the only way to make a shaped recipe invisible to vanilla's own
+  crafting-grid menus.
+  - **Copper tools/armor from copper ingots** craft at **full durability** (vanilla's
+    own ingot-based recipes for these were removed from the Crafting Table — see
+    below — so an ingot now only works in a Forge).
+  - **Iron and diamond tools/armor** are Forge-only; their vanilla Crafting Table
+    recipes were removed entirely.
+  - Crafting anything in a Forge **consumes 1 coal** (coal or charcoal, checked via
+    the `minecraft:coals` tag) from the fuel slot; with no coal present, the result
+    can't be taken out, mirroring vanilla furnace fuel-gating.
+- **Removed from the Crafting Table:** vanilla's own copper-ingot tool/armor recipes
+  (pickaxe, axe, shovel, hoe, sword, helmet, chestplate, leggings, boots) and all
+  nine iron and nine diamond tool/armor recipes — all of these are now Forge-only.
+  The raw-copper recipes on the Crafting Table/Crafting Bench are untouched.
+- **Crafting on a Forge flashes the adjacent Blast Furnace's lit state** for 1 second
+  (purely cosmetic — it never touches the furnace's actual fuel/burn state) and plays
+  the same sound as vanilla's Anvil repair action (`SoundEvents.ANVIL_USE`, via
+  `LevelEvent` id 1030).
+
 ## World Generation (Ore)
 
 - **Coal never generates above Y48** (15 blocks below sea level, Y63). The upper coal
@@ -213,6 +259,21 @@ blast furnace to process ore or stone at all.
   is modeled as item durability on the block's own item form, so it survives
   place/break cycles for free via vanilla's existing damage-value item component
   instead of a bespoke one.
+- The Forge's menu (`ForgeMenu`) intentionally does **not** extend vanilla's
+  `CraftingMenu`/`AbstractCraftingMenu`, unlike the Crafting Bench — that base ties
+  recipe lookup to `RecipeType.CRAFTING` (via `RecipeManager.getRecipeFor`), which is
+  exactly what `ForgeCraftingRecipe` needs to avoid so its recipes never leak into a
+  plain Crafting Table. It extends `AbstractContainerMenu` directly and reimplements
+  just enough of `CraftingMenu`'s slot/quick-move/result-slot logic by hand.
+- Forcing a Blast Furnace to visually light up (`RealStoneAge.flashBlastFurnaceLight`)
+  is safe to do independently of its real fuel state: `AbstractFurnaceBlockEntity`'s
+  own tick logic derives `isLit`/`wasLit` purely from its internal `litTimeRemaining`
+  counter and only ever *pushes* a `LIT` blockstate change when that internal value
+  transitions — it never reads back or corrects the blockstate against its own
+  timer. So as long as a furnace isn't actually burning real fuel (`litTimeRemaining`
+  stays 0), manually flipping its `LIT` property won't get fought or silently
+  reverted by the block entity's own ticking; a small tick-counted queue
+  (`ServerTickEvent.Post`) is enough to schedule turning it back off after 1 second.
 
 ## License
 
