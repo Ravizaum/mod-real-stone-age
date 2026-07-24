@@ -1,0 +1,1 @@
+{ "type": "realstoneage:forge_crafting", "key": { "X": "minecraft:iron_ingot" }, "pattern": ["XXX", "X X", "X X"], "result": { "id": "minecraft:iron_leggings" } }

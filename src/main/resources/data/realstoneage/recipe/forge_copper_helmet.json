@@ -1,0 +1,13 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "key": {
+    "X": "minecraft:copper_ingot"
+  },
+  "pattern": [
+    "XXX",
+    "X X"
+  ],
+  "result": {
+    "id": "minecraft:copper_helmet"
+  }
+}

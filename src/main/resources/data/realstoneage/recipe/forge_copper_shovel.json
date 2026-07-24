@@ -1,0 +1,15 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "key": {
+    "#": "minecraft:stick",
+    "X": "minecraft:copper_ingot"
+  },
+  "pattern": [
+    "X",
+    "#",
+    "#"
+  ],
+  "result": {
+    "id": "minecraft:copper_shovel"
+  }
+}

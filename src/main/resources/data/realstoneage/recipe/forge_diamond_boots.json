@@ -1,0 +1,1 @@
+{ "type": "realstoneage:forge_crafting", "key": { "X": "minecraft:diamond" }, "pattern": ["X X", "X X"], "result": { "id": "minecraft:diamond_boots" } }

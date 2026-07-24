@@ -1,0 +1,6 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "key": { "#": "minecraft:stick", "X": "#minecraft:diamond_tool_materials" },
+  "pattern": ["X", "X", "#"],
+  "result": { "id": "minecraft:diamond_sword" }
+}
