@@ -1,6 +1,7 @@
 {
   "block.realstoneage.rock": "Rock",
   "block.realstoneage.flint": "Flint",
+  "block.realstoneage.stick": "Stick",
   "block.realstoneage.crafting_bench": "Crafting Bench",
   "block.realstoneage.basic_anvil": "Basic Anvil",
   "container.realstoneage.forge": "Forge",
