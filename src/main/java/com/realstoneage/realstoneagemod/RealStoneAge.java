@@ -94,14 +94,19 @@ public class RealStoneAge {
             FEATURES.register("ore_exposed_capped", () -> new CappedExposureOreFeature(OreConfiguration.CODEC));
 
     // A rock, usable in place of cobblestone for stone tools, placeable in the world just like a button
-    public static final DeferredBlock<RockBlock> ROCK_BLOCK = BLOCKS.registerBlock("rock", p -> new RockBlock(p, false),
+    public static final DeferredBlock<RockBlock> ROCK_BLOCK = BLOCKS.registerBlock("rock", p -> new RockBlock(p, RockBlock.Footprint.SMALL),
             () -> BlockBehaviour.Properties.of().mapColor(MapColor.STONE).noCollision().strength(0.12F).pushReaction(PushReaction.DESTROY));
     public static final DeferredItem<BlockItem> ROCK = ITEMS.registerSimpleBlockItem("rock", ROCK_BLOCK);
 
     // A decorative flint shard found lying on the ground (world gen only; no placeable item -
     // vanilla flint stays a plain item, obtained from gravel or by breaking this block)
-    public static final DeferredBlock<RockBlock> FLINT_BLOCK = BLOCKS.registerBlock("flint", p -> new RockBlock(p, true),
+    public static final DeferredBlock<RockBlock> FLINT_BLOCK = BLOCKS.registerBlock("flint", p -> new RockBlock(p, RockBlock.Footprint.LARGE),
             () -> BlockBehaviour.Properties.of().mapColor(MapColor.STONE).noCollision().strength(0.12F).pushReaction(PushReaction.DESTROY));
+
+    // A decorative stick found lying on the ground (world gen only; no placeable item - vanilla
+    // stick stays a plain item, obtained from leaves/bushes or by breaking this block)
+    public static final DeferredBlock<RockBlock> STICK_BLOCK = BLOCKS.registerBlock("stick", p -> new RockBlock(p, RockBlock.Footprint.STICK),
+            () -> BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).noCollision().strength(0.12F).pushReaction(PushReaction.DESTROY));
 
     // Bellows, used to build a blast furnace. Not placeable in the world.
     public static final DeferredItem<Item> BELLOWS = ITEMS.registerSimpleItem("bellows");
@@ -384,6 +389,35 @@ public class RealStoneAge {
         if (!level.isClientSide()) {
             level.setBlockAndUpdate(pos, placedState);
             SoundType sound = FLINT_BLOCK.get().defaultBlockState().getSoundType();
+            level.playSound(null, pos, sound.getPlaceSound(), SoundSource.BLOCKS, sound.getVolume(), sound.getPitch());
+            var player = event.getPlayer();
+            if (player != null && !player.getAbilities().instabuild) {
+                event.getItemStack().shrink(1);
+            }
+        }
+        event.cancelWithResult(InteractionResult.SUCCESS);
+    }
+
+    // Vanilla stick has no block form of its own, so give the plain item a block-placing
+    // interaction (mirroring what a BlockItem would do) instead of registering a new item.
+    @SubscribeEvent
+    public void onUseStickOnBlock(UseItemOnBlockEvent event) {
+        if (event.getUsePhase() != UseItemOnBlockEvent.UsePhase.ITEM_AFTER_BLOCK
+                || !event.getItemStack().is(Items.STICK)) {
+            return;
+        }
+
+        var context = new BlockPlaceContext(event.getUseOnContext());
+        var pos = context.getClickedPos();
+        var level = context.getLevel();
+        var placedState = STICK_BLOCK.get().getStateForPlacement(context);
+        if (placedState == null || !context.canPlace() || !placedState.canSurvive(level, pos)) {
+            return;
+        }
+
+        if (!level.isClientSide()) {
+            level.setBlockAndUpdate(pos, placedState);
+            SoundType sound = STICK_BLOCK.get().defaultBlockState().getSoundType();
             level.playSound(null, pos, sound.getPlaceSound(), SoundSource.BLOCKS, sound.getVolume(), sound.getPitch());
             var player = event.getPlayer();
             if (player != null && !player.getAbilities().instabuild) {

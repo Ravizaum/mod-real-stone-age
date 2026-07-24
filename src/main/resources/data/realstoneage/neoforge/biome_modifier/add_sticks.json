@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": ["realstoneage:patch_stick"],
+  "step": "vegetal_decoration"
+}

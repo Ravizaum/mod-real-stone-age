@@ -63,6 +63,14 @@ overview, see [README.md](README.md).
   middle-click-picking it gives back plain vanilla flint. The block's model traces the
   flint icon's actual diamond silhouette (per-texture-row multi-box geometry) rather
   than a plain rectangular slab, and is roughly 20% thinner than its first draft.
+- **Stick** — no new item is registered; the *vanilla* `minecraft:stick` item is given
+  a placeable form, the same way flint is. Right-clicking a stick item onto a floor
+  places a decorative stick block (`realstoneage:stick`, floor-only, no collision);
+  breaking it or middle-click-picking it gives back plain vanilla stick. Like flint,
+  the block's model traces the stick icon's actual diagonal silhouette (per-texture-row
+  multi-box geometry, copied 1:1 from the 16x16 icon rather than scaled down) instead of
+  a plain rectangular slab, extruded to the same 1.6-unit thickness as flint for a bit of
+  real width instead of a flat sliver.
 - **Bellows** (`realstoneage:bellows`) — a plain, non-placeable item used to build a
   blast furnace. Crafted from 6 leather + 2 sticks. Uses the vanilla composter's icon
   for now.
@@ -115,6 +123,8 @@ overview, see [README.md](README.md).
   - A hit chunk scatters up to **10 candidates** (spread ±5 blocks horizontally, ±3
     vertically), each placed only if the target spot is valid — so a typical hit
     yields several rocks or flints across the chunk.
+- **Sticks** scatter the same way, but only on top of **grass blocks** (not stone or
+  sand) — same 1-in-6 chunk chance and up to 10 candidates per hit chunk.
 
 ## Breaking Blocks
 
@@ -229,9 +239,10 @@ overview, see [README.md](README.md).
   13.3% chance of walking away with at least one stick:
   - All leaf types (oak, spruce, birch, jungle, acacia, dark oak, mangrove, cherry,
     pale oak, azalea, flowering azalea)
-  - Leaf litter
   - Bush
   - Dead bush (now matches the others instead of its old, much higher vanilla rate)
+  - Leaf litter no longer drops sticks at all — sticks are now found on the ground
+    instead (see World Generation below).
 
 ## Technical Notes (for future maintenance)
 
