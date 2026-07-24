@@ -65,6 +65,46 @@ blast furnace to process ore or stone at all.
 - **Bellows** (`realstoneage:bellows`) — a plain, non-placeable item used to build a
   blast furnace. Crafted from 6 leather + 2 sticks. Uses the vanilla composter's icon
   for now.
+- **Stick Bundle** (`realstoneage:stick_bundle`) — a plain, non-placeable item used to
+  build a Crafting Bench. Crafted from 4 sticks in a 2x2 shape.
+- **Crafting Bench** (`realstoneage:crafting_bench`) — a wood-free, temporary
+  alternative to the vanilla Crafting Table, meant to break the mod's own
+  bootstrapping deadlock: axes/pickaxes need a 3x3 crafting grid, a real Crafting
+  Table needs planks, and planks need an axe to cut (see "Breaking Blocks" below) -
+  without some wood-free way to reach a 3x3 grid there'd be no way to ever get started.
+  - Crafted from 2 Rocks + 2 Stick Bundles in a 2x2 shape — fits the player's personal
+    inventory grid, so it needs zero prior infrastructure to obtain.
+  - Right-clicking it opens a full 3x3 crafting UI with the same recipe access as a
+    real Crafting Table.
+  - Survives 10 successful crafts, then self-destructs with no drop.
+  - Manually mining it before then drops it as an item instead, with its remaining
+    uses preserved, so it can be picked up and relocated.
+  - Stacks like a normal item (up to 64). Remaining uses aren't tracked via item
+    durability (a damageable item is forced to a max stack size of 1 in vanilla) -
+    instead it's a plain int tucked into the item's custom data component, present
+    only when uses are below the max, so fresh (full-uses) benches still stack
+    together with each other and with ones straight out of the recipe.
+  - Still shows the usual inventory durability bar despite not using real item
+    durability - `CraftingBenchItem` overrides `isBarVisible`/`getBarWidth`/
+    `getBarColor` to feed vanilla's own bar-rendering formulas from the custom-data
+    uses-left value instead of the (unused) damage component.
+  - Has its own block textures (front/side/top).
+  - Added to the vanilla `minecraft:mineable/axe` tag so axes get their normal mining
+    speed bonus on it, matching the real Crafting Table (custom blocks aren't in any
+    `mineable_with_*` tag by default, so without this every tool - including axes -
+    would mine it at the generic unlisted-tool speed).
+  - Uses `SoundType.WOOD` for its place/break sounds, matching the real Crafting
+    Table (a plain `Block` defaults to a stone-ish sound otherwise). Self-destructing
+    after the 10th use also plays this same break sound, even though no player is
+    actually mining it at that moment.
+  - Shows its remaining uses visually with the same crack overlay a player sees
+    while actively mining a block, without anyone actually mining it - each craft
+    rebroadcasts a `destroyBlockProgress` packet (using a fake, position-derived
+    "breaker" id instead of a real player) so nearby clients see progressively more
+    cracked textures as uses run out. Since that overlay auto-clears after 20 seconds
+    without an update, a block-entity ticker resends it periodically for as long as
+    the bench has any wear; it's cleared immediately whenever the bench is removed
+    (mined or self-destructed) so the crack doesn't linger on whatever replaces it.
 
 ## World Generation
 
@@ -162,6 +202,17 @@ blast furnace to process ore or stone at all.
   read from the mod's own resource files at runtime, because
   `getResourceAsStream("data/minecraft/loot_table/...")` is ambiguous on the merged
   mod/vanilla classpath and was resolving to vanilla's copy instead of ours.
+- The Crafting Bench's limited-uses UI (`CraftingBenchBlock`/`CraftingBenchBlockEntity`
+  /`CraftingBenchMenu`) is built almost entirely on top of vanilla's own crafting
+  classes rather than reimplementing the crafting grid: `CraftingBenchMenu` extends
+  vanilla's `CraftingMenu` and overrides only `addResultSlot` (to swap in a custom
+  `ResultSlot` that decrements a use counter on take) and `stillValid` (vanilla's own
+  checks against `Blocks.CRAFTING_TABLE` specifically, which isn't us) - no
+  crafting-grid or recipe-matching logic is duplicated. The use counter itself lives
+  in a small `BlockEntity` (since a `Menu` isn't persisted across game sessions) and
+  is modeled as item durability on the block's own item form, so it survives
+  place/break cycles for free via vanilla's existing damage-value item component
+  instead of a bespoke one.
 
 ## License
 

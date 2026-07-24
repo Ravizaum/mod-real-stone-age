@@ -62,6 +62,9 @@ public class RealStoneAge {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     // Create a Deferred Register to hold worldgen Features which will all be registered under the "realstoneage" namespace
     public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(Registries.FEATURE, MODID);
+    // Create a Deferred Register to hold BlockEntityTypes which will all be registered under the "realstoneage" namespace
+    public static final DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
 
     // Ore feature used by the above-Y48 "surface" iron/copper configured features - allows at most
     // one exposed-to-air block per vein instead of vanilla's all-or-nothing discard chance.
@@ -81,6 +84,20 @@ public class RealStoneAge {
     // Bellows, used to build a blast furnace. Not placeable in the world.
     public static final DeferredItem<Item> BELLOWS = ITEMS.registerSimpleItem("bellows");
 
+    // A bundle of 4 sticks, used to build a Crafting Bench. Not placeable in the world.
+    public static final DeferredItem<Item> STICK_BUNDLE = ITEMS.registerSimpleItem("stick_bundle");
+
+    // A wood-free, temporary Crafting Table - see CraftingBenchBlock/CraftingBenchBlockEntity for
+    // the limited-uses mechanic.
+    public static final DeferredBlock<CraftingBenchBlock> CRAFTING_BENCH_BLOCK = BLOCKS.registerBlock("crafting_bench", CraftingBenchBlock::new,
+            () -> BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD).noLootTable().noOcclusion());
+    public static final DeferredItem<CraftingBenchItem> CRAFTING_BENCH =
+            ITEMS.registerItem("crafting_bench", props -> new CraftingBenchItem(CRAFTING_BENCH_BLOCK.get(), props), Item.Properties::new);
+    public static final DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>,
+            net.minecraft.world.level.block.entity.BlockEntityType<CraftingBenchBlockEntity>> CRAFTING_BENCH_BLOCK_ENTITY =
+            BLOCK_ENTITIES.register("crafting_bench",
+                    () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(CraftingBenchBlockEntity::new, CRAFTING_BENCH_BLOCK.get()));
+
     // Recipes to remove entirely (wood and gold tools/armor can no longer be crafted)
     private static final String[] REMOVED_RECIPES = {
             "wooden_pickaxe", "wooden_axe", "wooden_shovel", "wooden_hoe", "wooden_sword",
@@ -99,6 +116,7 @@ public class RealStoneAge {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         FEATURES.register(modEventBus);
+        BLOCK_ENTITIES.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         NeoForge.EVENT_BUS.register(this);
@@ -253,9 +271,11 @@ public class RealStoneAge {
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(ROCK);
+            event.accept(STICK_BUNDLE);
         }
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(BELLOWS);
+            event.accept(CRAFTING_BENCH);
         }
     }
 

@@ -1,5 +1,7 @@
 {
   "block.realstoneage.rock": "Rock",
   "block.realstoneage.flint": "Flint",
-  "item.realstoneage.bellows": "Bellows"
+  "block.realstoneage.crafting_bench": "Crafting Bench",
+  "item.realstoneage.bellows": "Bellows",
+  "item.realstoneage.stick_bundle": "Stick Bundle"
 }
