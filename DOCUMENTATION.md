@@ -232,8 +232,9 @@ overview, see [README.md](README.md).
 
 ## Loot Table Tweaks
 
-- **Leather drop from animals increased 50%** (cow, horse, llama, trader llama,
-  donkey, mule, mooshroom, hoglin) — base drop range widened from 0–3 to 0–4.5.
+- **Leather drop from animals now guarantees at least 1** (cow, horse, llama, trader
+  llama, donkey, mule, mooshroom, hoglin) — the drop is unconditional (every kill
+  triggers it) with a uniform 1–3 roll, up from vanilla's 0–2 (0–1 for hoglin).
 - **Stick drops from foliage**, all scaled to the same **20% chance of the stick-drop
   roll firing, dropping 0-2 sticks (uniform) when it does** per break — so at most a
   13.3% chance of walking away with at least one stick:
