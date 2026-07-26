@@ -15,34 +15,6 @@
               "function": "minecraft:set_count"
             },
             {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 1.0,
-                "min": 0.0
-              },
-              "enchantment": "minecraft:looting",
-              "function": "minecraft:enchanted_count_increase"
-            }
-          ],
-          "name": "minecraft:leather"
-        }
-      ],
-      "rolls": 1.0
-    },
-    {
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "functions": [
-            {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
-              },
-              "function": "minecraft:set_count"
-            },
-            {
               "conditions": [
                 {
                   "condition": "minecraft:any_of",
@@ -88,7 +60,7 @@
               "function": "minecraft:enchanted_count_increase"
             }
           ],
-          "name": "minecraft:beef"
+          "name": "minecraft:porkchop"
         }
       ],
       "rolls": 1.0
@@ -101,7 +73,7 @@
             {
               "count": {
                 "type": "minecraft:uniform",
-                "max": 3.0,
+                "max": 2.0,
                 "min": 1.0
               },
               "function": "minecraft:set_count"
@@ -111,7 +83,26 @@
         }
       ],
       "rolls": 1.0
+    },
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 1.0,
+                "max": 3.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "realstoneage:small_hide"
+        }
+      ],
+      "rolls": 1.0
     }
   ],
-  "random_sequence": "minecraft:entities/cow"
+  "random_sequence": "minecraft:entities/pig"
 }

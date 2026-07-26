@@ -36,6 +36,12 @@ instead of a formality.
 - **Ore near the surface is stingier.** Coal, iron, and copper found near the surface
   are scarcer and reveal less of the vein than they do underground, so shallow mining
   is a lot less rewarding than digging deep.
+- **Hunting is harder and more deliberate.** Bare-handed kills on most animals drop
+  nothing at all, animals now drop bones (craftable into sticks) and hides
+  (craftable into leather), and predators no longer hunt other animals in the wild.
+- **Cheap shears, and grass you can grow on purpose.** Shears can be crafted early
+  from rock/flint (at half durability), string can be crafted from grass/fern/dripleaf
+  instead of just spiders, and bone meal turns hydrated farmland into grass.
 
 Want the exact numbers, recipes, and implementation details behind every change above?
 See [DOCUMENTATION.md](DOCUMENTATION.md).

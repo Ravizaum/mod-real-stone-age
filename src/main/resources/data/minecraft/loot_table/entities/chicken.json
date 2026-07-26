@@ -9,8 +9,8 @@
             {
               "count": {
                 "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
+                "max": 2.0,
+                "min": 0.0
               },
               "function": "minecraft:set_count"
             },
@@ -24,7 +24,7 @@
               "function": "minecraft:enchanted_count_increase"
             }
           ],
-          "name": "minecraft:leather"
+          "name": "minecraft:feather"
         }
       ],
       "rolls": 1.0
@@ -34,14 +34,6 @@
         {
           "type": "minecraft:item",
           "functions": [
-            {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
-              },
-              "function": "minecraft:set_count"
-            },
             {
               "conditions": [
                 {
@@ -88,30 +80,11 @@
               "function": "minecraft:enchanted_count_increase"
             }
           ],
-          "name": "minecraft:beef"
-        }
-      ],
-      "rolls": 1.0
-    },
-    {
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "functions": [
-            {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
-              },
-              "function": "minecraft:set_count"
-            }
-          ],
-          "name": "minecraft:bone"
+          "name": "minecraft:chicken"
         }
       ],
       "rolls": 1.0
     }
   ],
-  "random_sequence": "minecraft:entities/cow"
+  "random_sequence": "minecraft:entities/chicken"
 }

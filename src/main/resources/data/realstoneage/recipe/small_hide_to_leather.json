@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "HH",
+    "HH"
+  ],
+  "key": {
+    "H": "realstoneage:small_hide"
+  },
+  "result": {
+    "id": "minecraft:leather"
+  }
+}

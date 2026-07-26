@@ -7,39 +7,7 @@
           "type": "minecraft:item",
           "functions": [
             {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
-              },
-              "function": "minecraft:set_count"
-            },
-            {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 1.0,
-                "min": 0.0
-              },
-              "enchantment": "minecraft:looting",
-              "function": "minecraft:enchanted_count_increase"
-            }
-          ],
-          "name": "minecraft:leather"
-        }
-      ],
-      "rolls": 1.0
-    },
-    {
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "functions": [
-            {
-              "count": {
-                "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
-              },
+              "count": 1.0,
               "function": "minecraft:set_count"
             },
             {
@@ -88,7 +56,31 @@
               "function": "minecraft:enchanted_count_increase"
             }
           ],
-          "name": "minecraft:beef"
+          "name": "minecraft:rabbit"
+        }
+      ],
+      "rolls": 1.0
+    },
+    {
+      "conditions": [
+        {
+          "condition": "minecraft:killed_by_player"
+        },
+        {
+          "condition": "minecraft:random_chance_with_enchanted_bonus",
+          "enchanted_chance": {
+            "type": "minecraft:linear",
+            "base": 0.13,
+            "per_level_above_first": 0.03
+          },
+          "enchantment": "minecraft:looting",
+          "unenchanted_chance": 0.1
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:rabbit_foot"
         }
       ],
       "rolls": 1.0
@@ -101,8 +93,8 @@
             {
               "count": {
                 "type": "minecraft:uniform",
-                "max": 3.0,
-                "min": 1.0
+                "max": 1.0,
+                "min": 0.0
               },
               "function": "minecraft:set_count"
             }
@@ -111,7 +103,26 @@
         }
       ],
       "rolls": 1.0
+    },
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 2.0,
+                "min": 1.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "realstoneage:small_hide"
+        }
+      ],
+      "rolls": 1.0
     }
   ],
-  "random_sequence": "minecraft:entities/cow"
+  "random_sequence": "minecraft:entities/rabbit"
 }

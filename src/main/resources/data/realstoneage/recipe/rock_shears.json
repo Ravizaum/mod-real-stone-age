@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "#": "#realstoneage:shear_materials"
+  },
+  "pattern": [
+    " #",
+    "# "
+  ],
+  "result": {
+    "id": "minecraft:shears",
+    "components": {
+      "minecraft:damage": 119
+    }
+  }
+}

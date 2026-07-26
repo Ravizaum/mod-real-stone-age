@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "#": "#realstoneage:small_vegetation"
+  },
+  "pattern": [
+    " #",
+    "# "
+  ],
+  "result": {
+    "id": "minecraft:string"
+  }
+}

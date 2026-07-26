@@ -40,6 +40,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.ModifyRecipeJsonsEvent;
+import net.neoforged.neoforge.event.entity.player.BonemealEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.UseItemOnBlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
@@ -66,6 +67,20 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.enchantment.Enchantable;
 import net.neoforged.neoforge.event.ModifyDefaultComponentsEvent;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.minecraft.world.entity.animal.fox.Fox;
+import net.minecraft.world.entity.animal.polarbear.PolarBear;
+import net.minecraft.world.entity.animal.feline.Cat;
+import net.minecraft.world.entity.animal.feline.Ocelot;
+import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NonTameRandomTargetGoal;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.goal.Goal;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(RealStoneAge.MODID)
@@ -113,6 +128,12 @@ public class RealStoneAge {
 
     // A bundle of 4 sticks, used to build a Crafting Bench. Not placeable in the world.
     public static final DeferredItem<Item> STICK_BUNDLE = ITEMS.registerSimpleItem("stick_bundle");
+
+    // A small-game hide, dropped by Animal Group B and Group C (see GROUP_A_AND_B_ANIMALS/
+    // onLivingDrops below) and craftable into leather (see small_hide_to_leather.json). Not
+    // placeable in the world; reuses vanilla's rabbit hide texture for now (see
+    // models/item/small_hide.json).
+    public static final DeferredItem<Item> SMALL_HIDE = ITEMS.registerSimpleItem("small_hide");
 
     // A wood-free, temporary Crafting Table - see CraftingBenchBlock/CraftingBenchBlockEntity for
     // the limited-uses mechanic.
@@ -177,6 +198,19 @@ public class RealStoneAge {
     // also drives mining speed (30 vs 100 divisor); doing it there would make punching these
     // blocks faster too, which isn't wanted - only the drop changes, speed stays 100% vanilla.
     private static final Block[] PUNCHABLE_COPPER_ORE = { Blocks.COPPER_ORE, Blocks.DEEPSLATE_COPPER_ORE };
+
+    // Animal Group A (Leather 1-3, Bone 1-3) and Animal Group B (Hide 1-3, Bone 1-2) - killing one
+    // of these bare-handed drops nothing at all (see onLivingDrops), and they get their guaranteed
+    // drops on top of their usual loot (see the data/minecraft/loot_table/entities/*.json
+    // overrides). Group A: camel/cow/horse/llama/trader_llama/donkey/mule/mooshroom/hoglin.
+    // Group B: sheep/pig/goat/wolf/panda/polar_bear. (Animal Group C - rabbit/fox, Hide 1-2/
+    // Bone 0-1 - is defined purely via loot table and has no punch restriction.)
+    private static final java.util.Set<EntityType<?>> GROUP_A_AND_B_ANIMALS = java.util.Set.of(
+            EntityTypes.CAMEL, EntityTypes.COW, EntityTypes.HORSE, EntityTypes.LLAMA, EntityTypes.TRADER_LLAMA,
+            EntityTypes.DONKEY, EntityTypes.MULE, EntityTypes.MOOSHROOM, EntityTypes.HOGLIN,
+            EntityTypes.SHEEP, EntityTypes.PIG, EntityTypes.GOAT, EntityTypes.WOLF,
+            EntityTypes.PANDA, EntityTypes.POLAR_BEAR
+    );
 
     public RealStoneAge(IEventBus modEventBus) {
         // Register the Deferred Registers to the mod event bus so blocks and items get registered
@@ -341,6 +375,7 @@ public class RealStoneAge {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(ROCK);
             event.accept(STICK_BUNDLE);
+            event.accept(SMALL_HIDE);
         }
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(BELLOWS);
@@ -543,6 +578,46 @@ public class RealStoneAge {
         }
     }
 
+    // Punching a Group A or Group B animal to death (bare hand, no item at all) drops nothing -
+    // meat, leather/hide, and bone all included, since this fires after loot-table resolution but
+    // before the drops actually spawn. Group C animals aren't restricted this way.
+    @SubscribeEvent
+    public void onLivingDrops(LivingDropsEvent event) {
+        if (!(event.getSource().getEntity() instanceof Player player) || !player.getMainHandItem().isEmpty()) {
+            return;
+        }
+        if (GROUP_A_AND_B_ANIMALS.contains(event.getEntity().getType())) {
+            event.setCanceled(true);
+        }
+    }
+
+    // Strips vanilla's animal-on-animal predation AI: foxes/polar bears/ocelots only ever add
+    // NearestAttackableTargetGoal entries to targetSelector for hunting prey (never for anything
+    // else), and wolves/cats only ever add NonTameRandomTargetGoal entries for the same reason -
+    // confirmed by reading each class's registerGoals(). Removing every goal of that exact class
+    // from targetSelector therefore removes only the prey-hunting behavior, leaving everything
+    // else (movement, breeding, self-defense, etc.) untouched. Both goalSelector/targetSelector
+    // and removeGoal/getAvailableGoals are public vanilla API, so no mixin is needed.
+    @SubscribeEvent
+    public void onEntityJoinLevel(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Mob mob)) {
+            return;
+        }
+        if (mob instanceof Fox || mob instanceof PolarBear || mob instanceof Ocelot) {
+            removeTargetGoalsOfClass(mob, NearestAttackableTargetGoal.class);
+        } else if (mob instanceof Wolf || mob instanceof Cat) {
+            removeTargetGoalsOfClass(mob, NonTameRandomTargetGoal.class);
+        }
+    }
+
+    private static void removeTargetGoalsOfClass(Mob mob, Class<? extends Goal> goalClass) {
+        mob.targetSelector.getAvailableGoals().stream()
+                .map(net.minecraft.world.entity.ai.goal.WrappedGoal::getGoal)
+                .filter(goalClass::isInstance)
+                .toList()
+                .forEach(mob.targetSelector::removeGoal);
+    }
+
     // Logs normally drop themselves regardless of tool in vanilla; suppress that drop entirely
     // unless the tool used is an axe.
     @SubscribeEvent
@@ -550,6 +625,31 @@ public class RealStoneAge {
         if (event.getState().is(net.minecraft.tags.BlockTags.LOGS) && !event.getTool().is(ItemTags.AXES)) {
             event.setCanceled(true);
         }
+    }
+
+    // Bone-mealing hydrated Farmland (moisture > 0 - vanilla only grants that when water is
+    // within its normal range, see FarmlandBlock#isNearWater) turns it into a Grass Block, as
+    // long as it's also exposed to air above and lit brightly enough - reuses vanilla's own
+    // grass-spread light gate (SpreadingSnowyBlock#randomTick checks the exact same threshold).
+    // Farmland IS a BonemealableBlock in vanilla (bonemealing it normally just refreshes its
+    // moisture to max), so this handler must cancel the event via setSuccessful to stop
+    // BoneMealItem.applyBonemeal from falling through to that vanilla behavior once we've done
+    // our own thing.
+    @SubscribeEvent
+    public void onBonemealDirt(BonemealEvent event) {
+        Level level = event.getLevel();
+        BlockState state = event.getState();
+        if (level.isClientSide() || !state.is(Blocks.FARMLAND) || state.getValue(net.minecraft.world.level.block.FarmlandBlock.MOISTURE) <= 0) {
+            return;
+        }
+        BlockPos above = event.getPos().above();
+        if (!level.getBlockState(above).isAir() || level.getMaxLocalRawBrightness(above) < 9) {
+            return;
+        }
+        level.setBlockAndUpdate(event.getPos(), Blocks.GRASS_BLOCK.defaultBlockState());
+        event.getStack().shrink(1);
+        level.levelEvent(1505, event.getPos(), 0);
+        event.setSuccessful(true);
     }
 
     // Logs, planks, wooden slabs, and wooden stairs don't require a "correct tool" in vanilla the

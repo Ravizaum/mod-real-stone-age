@@ -232,9 +232,28 @@ overview, see [README.md](README.md).
 
 ## Loot Table Tweaks
 
-- **Leather drop from animals now guarantees at least 1** (cow, horse, llama, trader
-  llama, donkey, mule, mooshroom, hoglin) — the drop is unconditional (every kill
-  triggers it) with a uniform 1–3 roll, up from vanilla's 0–2 (0–1 for hoglin).
+- **Bones craft into sticks.** 2 Bone → 2 Stick (shapeless), so bones are a real
+  substitute for sticks in tool/Crafting Bench recipes without touching those recipes
+  directly.
+- **Small Hide**, a new item (currently reusing vanilla's rabbit hide texture),
+  crafts into leather 4-for-1 (shapeless).
+- **Animal drops are grouped into three tiers.** Each tier's guaranteed drops are an
+  unconditional loot pool on top of the animal's usual vanilla loot (meat, wool, etc. —
+  untouched), and killing a Group A or Group B animal bare-handed (no item in hand at
+  all) drops **nothing whatsoever**, guaranteed drops included:
+  - **Group A** (Leather 1–3, Bone 1–3): camel, cow, horse, llama, trader llama,
+    donkey, mule, mooshroom, hoglin. Leather guarantees at least 1 per kill —
+    an unconditional 1–3 roll, up from vanilla's 0–2 (0–1 for hoglin).
+  - **Group B** (Hide 1–3, Bone 1–2): sheep, pig, goat, wolf, panda, polar bear.
+  - **Group C** (Hide 1–2, Bone 0–1): rabbit, fox. No punch restriction — these
+    always drop normally. Rabbit no longer drops Rabbit Hide at all.
+  - **Cat and Ocelot drop nothing at all**, vanilla or modded (no string, no bone,
+    no hide).
+  - **Chicken** is untouched vanilla (feather + chicken only, no bone).
+- **Animal-on-animal predation is disabled.** Foxes, polar bears, ocelots, wolves, and
+  cats no longer hunt other animals (rabbits, chickens, turtles, fish, other foxes,
+  etc.) — their prey-targeting AI goals are stripped on spawn. Frogs and axolotls no
+  longer hunt anything either (their food/target entity-type tags are emptied).
 - **Stick drops from foliage**, all scaled to the same **20% chance of the stick-drop
   roll firing, dropping 0-2 sticks (uniform) when it does** per break — so at most a
   13.3% chance of walking away with at least one stick:
@@ -244,6 +263,28 @@ overview, see [README.md](README.md).
   - Dead bush (now matches the others instead of its old, much higher vanilla rate)
   - Leaf litter no longer drops sticks at all — sticks are now found on the ground
     instead (see World Generation below).
+
+## Farming, Shearing, and Foraging
+
+- **Cheap rock/flint shears.** A new recipe crafts vanilla Shears from 2 rock/flint
+  (`realstoneage:rock` or `minecraft:flint`, either combination), in the same diagonal
+  shape as vanilla's iron-ingot shears recipe. The crafted shears come out with
+  `minecraft:damage` pre-set to 119 — exactly half of vanilla's 238 max durability, so
+  they're a genuinely cheaper but half-used early-game alternative to the full iron
+  pair (whose own recipe is untouched).
+- **Bone meal turns hydrated Farmland into a Grass Block.** Tilled Farmland that's
+  hydrated (moisture > 0 — vanilla only grants that when water is within its normal
+  range, via `FarmlandBlock#isNearWater`) converts straight to a Grass Block when
+  bone-mealed, provided the block above it is air and lit at raw brightness ≥ 9 (the
+  same light threshold vanilla's own grass natural-spread check uses). This replaces
+  vanilla's normal "bonemeal refreshes Farmland's moisture" behavior for hydrated
+  Farmland specifically.
+- **String from small vegetation.** A new shaped recipe (same diagonal shape as the
+  shears recipe above) turns 2 items from a new `realstoneage:small_vegetation` tag
+  into a String: short grass, dry short grass, tall grass, dry tall grass, fern, large
+  fern, big dripleaf, and small dripleaf. Cave vines were deliberately left out since
+  they have no item form of their own in vanilla (breaking them only ever yields Glow
+  Berries).
 
 ## Technical Notes (for future maintenance)
 
