@@ -6,14 +6,18 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -31,11 +35,16 @@ import org.jspecify.annotations.Nullable;
 
 // The Basic Anvil: a cheaper, limited-durability stand-in for a vanilla Anvil - see
 // BasicAnvilBlockEntity.MAX_USES. Mirrors CraftingBenchBlock's identical use-count/no-loot-table/
-// preserve-on-drop pattern, plus vanilla AnvilBlock's FACING/rotation/hitbox behavior (minus its
-// FallingBlock gravity, which this block doesn't have). Has no interaction logic of its own -
-// right-clicking it (like a real Anvil) is handled centrally by RealStoneAge#onRightClickAnvil,
-// which opens ForgeMenu only when this block has an adjacent Blast Furnace.
-public class BasicAnvilBlock extends BaseEntityBlock {
+// preserve-on-drop pattern, plus vanilla AnvilBlock's FACING/rotation/hitbox/gravity behavior. Has
+// no interaction logic of its own - right-clicking it (like a real Anvil) is handled centrally by
+// RealStoneAge#onRightClickAnvil, which opens ForgeMenu only when this block has an adjacent Blast
+// Furnace.
+//
+// Extends FallingBlock (like the real AnvilBlock) rather than BaseEntityBlock, since a block can
+// only extend one class - EntityBlock (needed for the BasicAnvilBlockEntity uses-left tracking) is
+// implemented directly here instead, which means createTickerHelper (a BaseEntityBlock-only static
+// helper) isn't inherited; getTicker below just does that one-line check by hand.
+public class BasicAnvilBlock extends FallingBlock implements EntityBlock {
     public static final MapCodec<BasicAnvilBlock> CODEC = simpleCodec(BasicAnvilBlock::new);
     public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
 
@@ -80,8 +89,42 @@ public class BasicAnvilBlock extends BaseEntityBlock {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return createTickerHelper(type, RealStoneAge.BASIC_ANVIL_BLOCK_ENTITY.get(), BasicAnvilBlockEntity::serverTick);
+        return type == RealStoneAge.BASIC_ANVIL_BLOCK_ENTITY.get()
+                ? (BlockEntityTicker<T>) (BlockEntityTicker<?>) (BlockEntityTicker<BasicAnvilBlockEntity>) BasicAnvilBlockEntity::serverTick
+                : null;
+    }
+
+    // Falling-block behavior, matching the real AnvilBlock exactly (minus its chipped/damaged
+    // variant progression, which Basic Anvil has no equivalent of - it just falls and lands intact).
+    @Override
+    protected void falling(FallingBlockEntity entity) {
+        entity.setHurtsEntities(2.0F, 40);
+    }
+
+    @Override
+    public void onLand(Level level, BlockPos pos, BlockState state, BlockState replacedBlock, FallingBlockEntity entity) {
+        if (!entity.isSilent()) {
+            level.levelEvent(1031, pos, 0);
+        }
+    }
+
+    @Override
+    public void onBrokenAfterFall(Level level, BlockPos pos, FallingBlockEntity entity) {
+        if (!entity.isSilent()) {
+            level.levelEvent(1029, pos, 0);
+        }
+    }
+
+    @Override
+    public DamageSource getFallDamageSource(Entity entity) {
+        return entity.damageSources().anvil(entity);
+    }
+
+    @Override
+    public int getDustColor(BlockState state, BlockGetter level, BlockPos pos) {
+        return state.getMapColor(level, pos).col;
     }
 
     @Override

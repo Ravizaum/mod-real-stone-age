@@ -147,6 +147,19 @@ public class RealStoneAge {
             BLOCK_ENTITIES.register("crafting_bench",
                     () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(CraftingBenchBlockEntity::new, CRAFTING_BENCH_BLOCK.get()));
 
+    // Smelting-tool items for the Forge's Tool slot (see ForgeMenu) - Unfired Mold and Mold have no
+    // special behavior of their own (crafted/smelted via unfired_mold.json/mold_from_unfired_mold.json,
+    // consumed in ForgeMenu.ForgeResultSlot#onTake like any other non-damageable tool-slot item), while
+    // Iron Hammer is a plain durable item (real vanilla durability, damaged per craft the same place).
+    // The realstoneage:hammers tag (Rock + Iron Hammer) is what ForgeMenu's Tool slot checks against
+    // to recognize a Hammer - see data/realstoneage/tags/item/hammers.json.
+    public static final TagKey<Item> HAMMERS_TAG = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MODID, "hammers"));
+    public static final DeferredItem<Item> UNFIRED_MOLD = ITEMS.registerSimpleItem("unfired_mold");
+    public static final DeferredItem<Item> MOLD = ITEMS.registerSimpleItem("mold");
+    private static final int IRON_HAMMER_DURABILITY = 250;
+    public static final DeferredItem<Item> IRON_HAMMER =
+            ITEMS.registerItem("iron_hammer", Item::new, () -> new Item.Properties().durability(IRON_HAMMER_DURABILITY));
+
     // Recipe type for ForgeCraftingRecipe - deliberately NOT registered in a registry. RecipeMap
     // groups recipes by RecipeType identity alone (see RecipeMap#byType), so a plain instance from
     // RecipeType.simple is sufficient for recipe lookup to work; only the RecipeSerializer (which
@@ -156,17 +169,29 @@ public class RealStoneAge {
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<ForgeCraftingRecipe>> FORGE_CRAFTING_SERIALIZER =
             RECIPE_SERIALIZERS.register("forge_crafting", () -> ForgeCraftingRecipe.SERIALIZER);
 
-    // The Forge menu - opened by right-clicking a vanilla Anvil or a Basic Anvil that currently has
-    // an adjacent Blast Furnace (see onRightClickAnvil below). Neither anvil type has its own block
-    // entity that owns this menu type, since the vanilla Anvil is an unmodified vanilla block.
+    // The Forge menu - opened by right-clicking a vanilla Anvil or a Basic Anvil, with or without
+    // an adjacent Blast Furnace (see onRightClickAnvil below; furnace adjacency only gates Hot
+    // Working availability inside the menu). Neither anvil type has its own block entity that owns
+    // this menu type, since the vanilla Anvil is an unmodified vanilla block.
     public static final DeferredHolder<MenuType<?>, MenuType<ForgeMenu>> FORGE_MENU =
             MENU_TYPES.register("forge", () -> new MenuType<>(ForgeMenu::new, net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
 
+    // Anvil's own sound set, except the place sound is swapped for stone's - matching the Basic
+    // Anvil's smooth-stone-recolored texture (see textures/block/basic_anvil.png), since it's stone
+    // going down, not iron. Break/step/hit/fall stay Anvil's own (still a stand-in anvil, not an
+    // actual stone block).
+    private static final SoundType BASIC_ANVIL_SOUNDS = new SoundType(
+            SoundType.ANVIL.getVolume(), SoundType.ANVIL.getPitch(),
+            SoundType.ANVIL.getBreakSound(), SoundType.ANVIL.getStepSound(),
+            SoundType.STONE.getPlaceSound(), SoundType.ANVIL.getHitSound(), SoundType.ANVIL.getFallSound());
+
     // The Basic Anvil - a cheaper, limited-durability stand-in for a vanilla Anvil (see
-    // BasicAnvilBlockEntity.MAX_USES), used the same way: right-click it next to a Blast Furnace to
-    // open the Forge menu.
+    // BasicAnvilBlockEntity.MAX_USES), used the same way: right-click it to open the Forge menu.
+    // requiresCorrectToolForDrops matches the real Anvil's own properties exactly (same hardness
+    // already did, but without this a pickaxe wasn't actually required for full mining speed).
     public static final DeferredBlock<BasicAnvilBlock> BASIC_ANVIL_BLOCK = BLOCKS.registerBlock("basic_anvil", BasicAnvilBlock::new,
-            () -> BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(5.0F, 1200.0F).sound(SoundType.ANVIL).noLootTable().noOcclusion());
+            () -> BlockBehaviour.Properties.of().mapColor(MapColor.STONE).requiresCorrectToolForDrops().strength(5.0F, 1200.0F)
+                    .sound(BASIC_ANVIL_SOUNDS).noLootTable().noOcclusion());
     public static final DeferredItem<BasicAnvilItem> BASIC_ANVIL =
             ITEMS.registerItem("basic_anvil", props -> new BasicAnvilItem(BASIC_ANVIL_BLOCK.get(), props),
                     () -> new Item.Properties().useBlockDescriptionPrefix());
@@ -177,10 +202,13 @@ public class RealStoneAge {
 
     // Recipes to remove entirely (wood/gold tools+armor can no longer be crafted; vanilla's own
     // copper-ingot tool+armor recipes, and iron/diamond tools+armor, move to being Forge-exclusive -
-    // see the forge_copper_*/forge_iron_*/forge_diamond_* recipes and ForgeCraftingRecipe. The
-    // raw-copper recipes stay Crafting-Table-craftable as before - see copper_*_from_raw_copper.json).
-    // The vanilla Anvil recipe is deliberately NOT removed - it's craftable as normal, since it's now
-    // central to the Forge system (see onRightClickAnvil).
+    // see the forge_copper_*/forge_iron_*/forge_diamond_* recipes and ForgeCraftingRecipe. Raw-copper
+    // Crafting Table recipes are gone entirely too - see the deleted copper_*_from_raw_copper.json
+    // files - copper crafting is Forge-only (Cold Working) now, ingot-based, same as iron/diamond).
+    // A further batch of plain vanilla iron/copper item recipes also move to being Forge-exclusive -
+    // see forge_shears.json etc. (Hot Working) and forge_spyglass.json etc. (Cold Working) - including
+    // the vanilla Anvil's own recipe itself (forge_anvil.json, Hot Working); Basic Anvil
+    // (basic_anvil.json) remains the Crafting-Table bootstrap route, unaffected.
     private static final String[] REMOVED_RECIPES = {
             "wooden_pickaxe", "wooden_axe", "wooden_shovel", "wooden_hoe", "wooden_sword",
             "golden_pickaxe", "golden_axe", "golden_shovel", "golden_hoe", "golden_sword",
@@ -190,7 +218,12 @@ public class RealStoneAge {
             "iron_pickaxe", "iron_axe", "iron_shovel", "iron_hoe", "iron_sword",
             "iron_helmet", "iron_chestplate", "iron_leggings", "iron_boots",
             "diamond_pickaxe", "diamond_axe", "diamond_shovel", "diamond_hoe", "diamond_sword",
-            "diamond_helmet", "diamond_chestplate", "diamond_leggings", "diamond_boots"
+            "diamond_helmet", "diamond_chestplate", "diamond_leggings", "diamond_boots",
+            // Hot Working: additional iron items (see forge_*.json for each)
+            "shears", "rail", "minecart", "iron_trapdoor", "iron_door", "iron_chain",
+            "heavy_weighted_pressure_plate", "compass", "cauldron", "bucket", "anvil", "iron_bars",
+            // Cold Working: additional copper items (see forge_*.json for each)
+            "spyglass", "lightning_rod", "copper_trapdoor", "copper_door", "copper_chest", "copper_chain"
     };
 
     // Blocks that drop something extra when punched without a pickaxe - see onBreakBlock. This is
@@ -376,11 +409,16 @@ public class RealStoneAge {
             event.accept(ROCK);
             event.accept(STICK_BUNDLE);
             event.accept(SMALL_HIDE);
+            event.accept(UNFIRED_MOLD);
+            event.accept(MOLD);
         }
         if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(BELLOWS);
             event.accept(CRAFTING_BENCH);
             event.accept(BASIC_ANVIL);
+        }
+        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(IRON_HAMMER);
         }
     }
 
@@ -465,11 +503,10 @@ public class RealStoneAge {
     private static final net.minecraft.network.chat.Component FORGE_TITLE = net.minecraft.network.chat.Component.translatable("container.realstoneage.forge");
 
     // Repurposes right-clicking a vanilla Anvil or a Basic Anvil: instead of the normal
-    // repair/rename menu (which this mod drops entirely), it opens the Forge menu - but only when
-    // the anvil currently has a Blast Furnace in an adjacent block space. With no adjacent furnace,
-    // right-clicking either anvil does nothing. This check is purely live (done on every
-    // right-click, and again in ForgeMenu#stillValid while the menu is open) - there's no stored
-    // link, so moving the furnace away just makes the anvil useless again.
+    // repair/rename menu (which this mod drops entirely), it always opens the Forge menu now,
+    // regardless of whether a Blast Furnace is adjacent. Furnace adjacency only gates Hot Working
+    // availability inside the menu (a live, per-tick check - see ForgeMenu#broadcastChanges), not
+    // whether the Forge opens at all - a furnace-less Forge is still usable for Cold Working.
     @SubscribeEvent
     public void onRightClickAnvil(PlayerInteractEvent.RightClickBlock event) {
         Level level = event.getEntity().level();
@@ -484,7 +521,7 @@ public class RealStoneAge {
         // sides, without touching the held item's own interaction (e.g. placing another block
         // against this one still works normally).
         event.setUseBlock(net.minecraft.util.TriState.FALSE);
-        if (level.isClientSide() || !hasAdjacentBlastFurnace(level, pos)) {
+        if (level.isClientSide()) {
             return;
         }
 
@@ -512,7 +549,7 @@ public class RealStoneAge {
     // How long the Blast Furnace visually "lights up" for after a Forge craft is taken (see
     // ForgeMenu#onCraftTaken) - purely cosmetic, doesn't touch the furnace's own real fuel/burn
     // state, so it's tracked independently here rather than on the furnace's block entity.
-    private static final int FURNACE_FLASH_DURATION_TICKS = 20;
+    private static final int FURNACE_FLASH_DURATION_TICKS = 40;
     private static final Map<ServerLevel, Map<BlockPos, Integer>> PENDING_FURNACE_UNLIGHTS = new HashMap<>();
 
     public static void flashBlastFurnaceLight(ServerLevel level, BlockPos furnacePos) {

@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "hot",
+  "key": { "#": "minecraft:iron_ingot" },
+  "pattern": ["##", "##", "##"],
+  "result": { "id": "minecraft:iron_door", "count": 3 }
+}

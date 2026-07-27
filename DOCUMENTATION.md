@@ -13,12 +13,13 @@ overview, see [README.md](README.md).
   blackstone, and cobbled deepslate. (`minecraft:stone_tool_materials` tag extended
   with `minecraft:flint` and `realstoneage:rock`.)
 - **Copper tools and armor**, craftable directly from raw copper (no smelting
-  required) on a Crafting Table or Crafting Bench: pickaxe, axe, shovel, hoe, sword,
-  helmet, chestplate, leggings, boots. Each comes out at **half durability**
+  required) at a Forge, Cold Working: pickaxe, axe, shovel, hoe, sword, helmet,
+  chestplate, leggings, boots. Each comes out at **half durability**
   (`minecraft:damage` component pre-set to half max). Smelting the copper into an
-  ingot first no longer works on a plain Crafting Table at all - vanilla's own
-  ingot-based recipes for these were removed; an ingot now only works in a Forge,
-  and gives full durability instead. See "Forge Smelting System" below.
+  ingot first and forging that instead (also Cold Working) gives full durability.
+  Neither route works on a plain Crafting Table at all anymore - vanilla's own
+  ingot-based recipes for these were removed, and the raw-copper versions moved to
+  the Forge too. See "Forge Smelting System" below.
 - **Retuned stone/copper/iron/diamond tool stats**, applied via NeoForge's
   `ModifyDefaultComponentsEvent` directly on the vanilla items. Every field below is
   explicitly declared per tier (`TierToolStats` in `RealStoneAge.java`), even where it
@@ -154,55 +155,112 @@ overview, see [README.md](README.md).
 
 ## Furnaces
 
-- **Regular furnaces can no longer smelt ores or stone.** Smelting recipes for
-  iron/gold/copper ore (all variants, including raw-metal-only smelting) and
-  cobblestone→stone are disabled for the regular furnace (`minecraft:smelting`);
-  the corresponding **blasting** recipes remain active, so a blast furnace is
-  required for all of that.
+- **Regular furnaces can no longer smelt ores.** Smelting recipes for iron/gold/copper
+  ore (all variants, including raw-metal-only smelting) and for coal, diamond,
+  redstone, emerald, lapis lazuli, and nether quartz ore (including deepslate
+  variants, where they exist) are disabled for the regular furnace
+  (`minecraft:smelting`); the corresponding **blasting** recipes remain active, so a
+  blast furnace is required for all ore smelting. Cobblestone→stone smelting is
+  untouched — a regular furnace still smelts stone exactly like vanilla.
 - **Blast furnace recipe:** 8 bricks + 1 bellows (in a ring, bellows in the center).
-- **Blast furnace runs at normal furnace speed** — all blasting-recipe cook times
-  were doubled from the vanilla 100 ticks to 200 ticks, matching the regular
-  furnace exactly (no more "blast furnace is 2x faster" vanilla behavior).
+  Its cook times and speed advantage over a regular furnace are otherwise untouched
+  vanilla behavior.
 
 ## Forge Smelting System
 
 - **The vanilla Anvil is repurposed as a smelting station.** Right-clicking an Anvil
-  with a **Blast Furnace in an adjacent block space** opens a Forge menu (a 3x3
-  crafting grid plus a coal-only fuel slot) instead of vanilla's item repair/rename
-  menu — that repair menu no longer opens at all, even without an adjacent furnace.
-  With no adjacent Blast Furnace, right-clicking an Anvil does nothing. The adjacency
-  check is live — done fresh on every right-click, and re-checked continuously while
-  the Forge menu is open — so pulling the Blast Furnace away closes the menu and makes
-  the Anvil useless again, with nothing stored linking the two blocks. The Anvil's own
-  crafting recipe is unchanged from vanilla.
+  now **always** opens a Forge menu (a 3x3 crafting grid, a Tool slot, and a fuel
+  slot) instead of vanilla's item repair/rename menu — that repair menu no longer
+  opens at all. Whether a Blast Furnace is adjacent no longer gates whether the Forge
+  opens; it only gates **Hot Working** (see below), checked live every server tick
+  for as long as the menu is open. The Anvil's own crafting recipe **no longer
+  exists** — see "Removed from the Crafting Table" below; it's now Forge-only, like
+  the rest of the iron item list.
 - **Basic Anvil** (`realstoneage:basic_anvil`) — a cheaper, limited-durability
   stand-in for a vanilla Anvil: same shape recipe as a real Anvil, but smooth stone
   in place of the iron blocks and cobblestone in place of the iron ingots. Works
-  identically to a real Anvil (same adjacency check, same Forge menu, same recipes),
-  but only survives **16 crafts** before self-destructing with no drop — manually
-  mining it before then instead drops it as an item with its remaining uses
-  preserved, the same mechanic as the Crafting Bench (including the crack-overlay
-  wear effect and inventory durability bar). Rotates with the same `FACING` behavior
-  and the same narrow hitbox (base/legs/top slab) as a real Anvil.
+  identically to a real Anvil (same Forge menu, same recipes), but only survives
+  **16 crafts** before self-destructing with no drop — manually mining it before then
+  instead drops it as an item with its remaining uses preserved, the same mechanic as
+  the Crafting Bench (including the crack-overlay wear effect and inventory
+  durability bar). Rotates with the same `FACING` behavior and the same narrow
+  hitbox (base/legs/top slab) as a real Anvil. It remains the wood-free,
+  furnace-free bootstrap route to a Forge, since the real Anvil recipe is gone.
+  Uses its own textures (`textures/block/basic_anvil.png`/`basic_anvil_top.png`) -
+  vanilla's own anvil block/body/top textures, programmatically recolored from
+  iron's dark gray into smooth stone's lighter neutral gray range, keeping the same
+  shading/weathering detail so it still reads as an anvil, just stone instead of
+  iron. Its placement sound is a plain stone place sound, matching that texture
+  swap; break/step/hit/fall sounds are still the vanilla Anvil's own.
+- **Basic Anvil falls with gravity**, exactly like a real Anvil (it hurts entities it
+  lands on, plays the same landing/breaking sounds, and requires a pickaxe for full
+  mining speed - `requiresCorrectToolForDrops`, matching the real Anvil's own block
+  properties). Unlike a real Anvil it has no chipped/damaged progression - it's a
+  single block that just falls and lands intact. Also added to the vanilla
+  `minecraft:mineable/pickaxe` tag - same reason the Crafting Bench needed adding to
+  `minecraft:mineable/axe` (see above): custom blocks aren't in any
+  `mineable_with_*` tag by default, so without this a pickaxe wouldn't actually be
+  recognized as the "correct" tool and `requiresCorrectToolForDrops` would slow
+  *every* tool down instead of just the wrong ones.
+- **Cold Working and Hot Working.** The Forge menu has a **Tool slot** that selects
+  which of the two Working modes is active, and gates which recipes can match:
+  - Putting a **Hammer** (a Rock, or the new Iron Hammer) in the Tool slot selects
+    **Cold Working** — no fuel needed at all; the fuel slot can't accept anything
+    while Cold Working is selected. Works on a Forge with or without an adjacent
+    Blast Furnace.
+  - Putting a **Mold** in the Tool slot selects **Hot Working** — needs 1 coal per
+    craft in the fuel slot, exactly like before. A Mold can only be placed in the
+    Tool slot at all while a Blast Furnace is currently adjacent; pulling the
+    furnace away mid-session makes an already-placed Mold inert (Hot recipes stop
+    matching, the fuel slot stops accepting coal) without closing the menu.
+  - A Rock or a Mold is **fully consumed after exactly one craft**. An Iron Hammer
+    instead takes **real, per-craft durability damage** (350 max) like any other
+    tool, and eventually breaks the same way a vanilla tool does.
+  - **Copper tools/armor, Spyglass, Lightning Rod, Copper Trapdoor/Door/Chest/Chain,
+    and a Bucket (from copper ingots)** are Cold Working recipes.
+  - **Iron tools/armor/Shears/Rail/Minecart/Trapdoor/Door/Chain/Pressure Plate/
+    Compass/Cauldron/Bucket/Anvil/Bars, Diamond tools/armor, and the new Iron
+    Hammer** are Hot Working recipes.
+  - Anvils without an adjacent Blast Furnace only ever offer Cold Working (Molds
+    simply can't be placed in the Tool slot); Anvils with an adjacent furnace offer
+    both, and any Tool item can be used.
+- **Unfired Mold** (`realstoneage:unfired_mold`) — crafted from a clay ball on a
+  Crafting Table. **Mold** (`realstoneage:mold`) — obtained by smelting an Unfired
+  Mold in a **regular Furnace** (not a Blast Furnace); single-use, as described
+  above.
+- **Iron Hammer** (`realstoneage:iron_hammer`) — a durable Tool-slot item craftable
+  via a Hot Working Forge recipe (needs a Mold, fuel, and an adjacent furnace to
+  make the very first one — never needs an existing Hammer, so there's no
+  bootstrapping circularity). Rocks continue to work as a free, single-use Hammer
+  alternative.
 - **Forge recipes use their own custom `RecipeType`** (`realstoneage:forge_crafting`,
   `ForgeCraftingRecipe`), entirely separate from vanilla's `RecipeType.CRAFTING`.
   This is what keeps Forge-exclusive recipes from also becoming craftable on a plain
   Crafting Table — recipe lookup groups recipes purely by `RecipeType` identity, so a
   distinct type is the only way to make a shaped recipe invisible to vanilla's own
-  crafting-grid menus.
+  crafting-grid menus. Each recipe also declares a `working_type` (`cold` or `hot`),
+  checked against the Forge's currently-selected Working mode before it can match.
   - **Copper tools/armor from copper ingots** craft at **full durability** (vanilla's
-    own ingot-based recipes for these were removed from the Crafting Table — see
-    below — so an ingot now only works in a Forge).
+    own ingot-based recipes for these were removed from the Crafting Table entirely
+    — see below — so an ingot now only works in a Forge).
   - **Iron and diamond tools/armor** are Forge-only; their vanilla Crafting Table
     recipes were removed entirely.
-  - Crafting anything in a Forge **consumes 1 coal** (coal or charcoal, checked via
-    the `minecraft:coals` tag) from the fuel slot; with no coal present, the result
-    can't be taken out, mirroring vanilla furnace fuel-gating.
+  - Crafting anything Hot Worked in a Forge **consumes 1 coal** (coal or charcoal,
+    checked via the `minecraft:coals` tag) from the fuel slot; with no coal present,
+    the result can't be taken out, mirroring vanilla furnace fuel-gating. Cold
+    Working never needs fuel.
 - **Removed from the Crafting Table:** vanilla's own copper-ingot tool/armor recipes
-  (pickaxe, axe, shovel, hoe, sword, helmet, chestplate, leggings, boots) and all
-  nine iron and nine diamond tool/armor recipes — all of these are now Forge-only.
-  The raw-copper recipes on the Crafting Table/Crafting Bench are untouched.
-- **Crafting on a Forge flashes the adjacent Blast Furnace's lit state** for 1 second
+  (pickaxe, axe, shovel, hoe, sword, helmet, chestplate, leggings, boots), all nine
+  iron and nine diamond tool/armor recipes, the raw-copper tool/armor recipes, the
+  vanilla Anvil recipe, and the full list of additional iron/copper item recipes
+  named above — all of these are now Forge-only, Cold or Hot Worked as listed above.
+- **Raw copper tools/armor are still craftable, just Forge-only now (Cold Working).**
+  Same shapes as the old Crafting Table raw-copper recipes, same half-durability
+  results (`forge_copper_*_from_raw_copper.json`, `minecraft:damage` pre-set exactly
+  as before) - only the location moved, from Crafting Table to Forge, alongside the
+  full-durability ingot versions (`forge_copper_*.json`). Both are Cold Working, so
+  either just needs a Hammer in the Tool slot, no fuel or furnace required.
+- **Crafting on a Forge flashes the adjacent Blast Furnace's lit state** for 2 seconds
   (purely cosmetic — it never touches the furnace's actual fuel/burn state) and plays
   the same sound as vanilla's Anvil repair action (`SoundEvents.ANVIL_USE`, via
   `LevelEvent` id 1030).
@@ -324,4 +382,4 @@ overview, see [README.md](README.md).
   timer. So as long as a furnace isn't actually burning real fuel (`litTimeRemaining`
   stays 0), manually flipping its `LIT` property won't get fought or silently
   reverted by the block entity's own ticking; a small tick-counted queue
-  (`ServerTickEvent.Post`) is enough to schedule turning it back off after 1 second.
+  (`ServerTickEvent.Post`) is enough to schedule turning it back off after 2 seconds.

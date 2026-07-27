@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "hot",
+  "key": { "#": "minecraft:iron_ingot", "/": "minecraft:stick" },
+  "pattern": ["##", " /", " /"],
+  "result": { "id": "realstoneage:iron_hammer" }
+}

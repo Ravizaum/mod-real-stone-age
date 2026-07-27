@@ -24,10 +24,12 @@ instead of a formality.
 - **Tools and armor feel different by tier.** Stone is weaker and more brittle than
   vanilla, iron is much tougher, and armor across the board leans further into
   protecting your legs and knocking enemies back.
-- **A proper forge, not just a furnace.** Ores and stone can no longer be smelted in a
-  regular furnace — you need a blast furnace. Iron and diamond gear now requires
-  building a forge (an anvil paired with a blast furnace) rather than a crafting
-  table.
+- **A proper forge, not just a furnace.** Ores can no longer be smelted in a regular
+  furnace — you need a blast furnace. Any anvil now opens a forge on its own:
+  fit it with a hammer for cold-working copper gear (and a growing list of copper
+  fittings) with no fuel at all, or pair it with a blast furnace and swap in a mold
+  for hot-working iron, diamond, and a long list of iron hardware that used to be
+  plain crafting-table recipes.
 - **New early-game items:** loose rocks and flint shards you can pick up off the
   ground, a bellows for building your first blast furnace, and a disposable,
   wood-free Crafting Bench so you're never stuck without a crafting grid.

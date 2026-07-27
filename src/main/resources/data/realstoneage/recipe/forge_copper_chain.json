@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "cold",
+  "key": { "I": "minecraft:copper_ingot", "N": "minecraft:copper_nugget" },
+  "pattern": ["N", "I", "N"],
+  "result": { "id": "minecraft:copper_chain" }
+}

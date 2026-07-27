@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "cold",
+  "key": { "#": "minecraft:amethyst_shard", "X": "minecraft:copper_ingot" },
+  "pattern": [" # ", " X ", " X "],
+  "result": { "id": "minecraft:spyglass" }
+}

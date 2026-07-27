@@ -1,1 +1,2 @@
-{ "type": "realstoneage:forge_crafting", "key": { "X": "minecraft:diamond" }, "pattern": ["X X", "X X"], "result": { "id": "minecraft:diamond_boots" } }
+{ "type": "realstoneage:forge_crafting",
+  "working_type": "hot", "key": { "X": "minecraft:diamond" }, "pattern": ["X X", "X X"], "result": { "id": "minecraft:diamond_boots" } }

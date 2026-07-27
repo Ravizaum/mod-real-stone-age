@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "cold",
+  "key": { "#": "minecraft:stick", "X": "minecraft:raw_copper" },
+  "pattern": ["X", "#", "#"],
+  "result": { "id": "minecraft:copper_shovel", "components": { "minecraft:damage": 95 } }
+}

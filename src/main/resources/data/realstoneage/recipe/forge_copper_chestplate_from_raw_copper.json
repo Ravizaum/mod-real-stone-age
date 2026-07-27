@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "cold",
+  "key": { "X": "minecraft:raw_copper" },
+  "pattern": ["X X", "XXX", "XXX"],
+  "result": { "id": "minecraft:copper_chestplate", "components": { "minecraft:damage": 88 } }
+}

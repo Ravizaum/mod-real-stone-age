@@ -1,0 +1,7 @@
+{
+  "type": "realstoneage:forge_crafting",
+  "working_type": "cold",
+  "key": { "#": "minecraft:stick", "X": "minecraft:raw_copper" },
+  "pattern": ["XX", "X#", " #"],
+  "result": { "id": "minecraft:copper_axe", "components": { "minecraft:damage": 95 } }
+}
